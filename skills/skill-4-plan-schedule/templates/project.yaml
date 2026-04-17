@@ -1,0 +1,60 @@
+# Project Configuration Template
+# Created by prd2impl skill-4-plan-schedule
+# Edit this file to configure your project
+
+---
+project:
+  name: "{Project Name}"
+  description: "{One-line project description}"
+
+  # PRD reference
+  prd: "{path to PRD document}"
+
+  # Timeline
+  start_date: "{YYYY-MM-DD}"
+  target_end: null  # Set a deadline or leave null for estimate-based planning
+
+  # Team configuration
+  team:
+    - id: DevA
+      name: "{Developer A name}"
+      line: A
+      branch: dev-a
+      skills: [backend, engine, business-logic]
+
+    - id: DevB
+      name: "{Developer B name}"
+      line: B
+      branch: dev-b
+      skills: [frontend, delivery, devops]
+
+  # Work parameters
+  work_hours_per_day: 8
+  parallel_capacity: 2  # How many lines work simultaneously
+
+  # Branch strategy
+  branches:
+    main: main           # Production branch
+    integration: dev     # Integration branch (milestone merges go here)
+    line_a: dev-a        # Line A development branch
+    line_b: dev-b        # Line B development branch
+
+  # SLA for reviews and decisions
+  sla:
+    red_decision: "30 min"    # Max wait for Red task decisions
+    yellow_review: "30 min"   # Max wait for Yellow task reviews
+    blocker_response: "1 hour" # Max wait for blocker resolution
+
+  # Dev-loop integration
+  dev_loop:
+    enabled: true
+    pipeline: [eval-doc, test-plan, test-code, implementation, test-runner]
+    artifact_dir: ".artifacts"
+
+  # Commit message convention
+  commits:
+    task_start: "task: {id} → in_progress ({owner})"
+    task_complete: "task: {id} → completed"
+    task_blocked: "task: {id} → blocked: {reason}"
+    batch_dispatch: "task: batch-{n} dispatch — {ids} → in_progress"
+    milestone_merge: "milestone: {id} gate passed"

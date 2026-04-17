@@ -1,0 +1,11 @@
+# Runtime artifacts
+.artifacts/
+*.pyc
+__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific generated data
+*.workspace/

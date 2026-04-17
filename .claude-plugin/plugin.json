@@ -1,0 +1,21 @@
+{
+  "name": "prd2impl",
+  "description": "PRD-to-Implementation pipeline: 12-skill workflow from requirement analysis to task execution, progress tracking, and milestone verification",
+  "version": "0.1.0",
+  "author": {
+    "name": "h2os.cloud"
+  },
+  "license": "MIT",
+  "keywords": [
+    "prd",
+    "requirements",
+    "task-management",
+    "gap-analysis",
+    "batch-dispatch",
+    "milestone",
+    "collaboration",
+    "dev-loop",
+    "project-planning",
+    "smoke-test"
+  ]
+}

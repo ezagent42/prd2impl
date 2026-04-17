@@ -1,0 +1,14 @@
+{
+  "name": "prd2impl",
+  "plugins": [
+    {
+      "name": "prd2impl",
+      "source": "./",
+      "description": "PRD-to-Implementation pipeline: 12-skill workflow from requirement analysis to task execution, progress tracking, and milestone verification",
+      "version": "0.1.0"
+    }
+  ],
+  "owner": {
+    "name": "h2os.cloud"
+  }
+}

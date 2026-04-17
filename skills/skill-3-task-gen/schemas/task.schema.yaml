@@ -1,0 +1,75 @@
+# Task Schema — defines the structure of a single task
+# Used for validation by skill-3-task-gen and downstream skills
+
+type: object
+required: [id, name, line, type, phase, depends_on, deliverables, verification, status]
+properties:
+  id:
+    type: string
+    pattern: "^T\\d+[ABS]\\.\\d+$"
+    description: "Task ID in format T{Phase}{Line}.{Seq}"
+  name:
+    type: string
+    minLength: 3
+    maxLength: 100
+  description:
+    type: string
+  line:
+    type: string
+    enum: [A, B, S]
+    description: "A=backend, B=frontend, S=shared"
+  type:
+    type: string
+    enum: [green, yellow, red]
+    description: "green=AI-independent, yellow=AI+review, red=human-driven"
+  phase:
+    type: string
+    pattern: "^P\\d+$"
+  module:
+    type: string
+    description: "Module ID from prd-structure.yaml"
+  gap_ref:
+    type: string
+    description: "Gap ID from gap-analysis.yaml"
+  story_refs:
+    type: array
+    items:
+      type: string
+  depends_on:
+    type: array
+    items:
+      type: string
+    description: "Task IDs that must be completed before this task"
+  blocked_by:
+    type: array
+    items:
+      type: string
+    description: "External blockers (not task dependencies)"
+  deliverables:
+    type: array
+    items:
+      type: object
+      required: [path, type]
+      properties:
+        path:
+          type: string
+        type:
+          type: string
+          enum: [code, test, doc, config]
+  verification:
+    type: string
+    description: "How to verify this task is complete"
+  estimated_effort:
+    type: string
+    enum: [small, medium, large]
+    description: "small=<2h, medium=2-8h, large=>8h"
+  status:
+    type: string
+    enum: [pending, in_progress, completed, blocked, failed]
+  owner:
+    type: [string, "null"]
+  artifacts:
+    type: array
+    items:
+      type: string
+    description: "Artifact IDs from .artifacts/registry.json"
