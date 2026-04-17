@@ -40,6 +40,27 @@ Launch multiple tasks in parallel using Claude Code's Agent tool. Verify all pre
 
 ### Step 2: Pre-flight Checks
 
+#### 2a. Branch freshness (MANDATORY — do this FIRST)
+
+Worktrees inherit the base branch HEAD. Stale base = stale agents = merge conflicts. **Always sync before dispatch.**
+
+1. Run `git fetch origin`
+2. Check current branch: `git branch --show-current`
+3. Compare: `git log HEAD..origin/{branch} --oneline`
+4. **If behind remote → auto-pull**:
+   ```bash
+   git pull origin {branch}
+   ```
+   Report what was pulled:
+   ```
+   ✅ Synced {branch}: pulled {N} commits from origin
+   ```
+5. **If pull fails** (conflicts, dirty working tree): STOP dispatch, report the issue, do NOT proceed
+6. **If already up to date**: proceed silently
+7. If user specifies a different base branch, switch to it and repeat the sync
+
+#### 2b. Task readiness
+
 For each task, verify:
 - [ ] Task status is `pending` (⬜)
 - [ ] All dependencies are `completed` (🟩)
@@ -153,6 +174,7 @@ As agents complete (via background notifications):
 - **Never dispatch Red tasks** — they require human-in-the-loop from the start
 - **Never dispatch tasks with unmet dependencies** — even if user insists, warn and require explicit override
 - **Always use worktree isolation** — prevent file conflicts between parallel agents
+- **Always verify branch freshness before dispatch** — worktrees inherit the base branch HEAD; stale base = stale worktrees = merge conflicts
 - **Limit concurrency** — respect system resources, max 5 agents
 - **Auto-stop on conflict** — if two agents try to modify the same file, pause and alert
 
