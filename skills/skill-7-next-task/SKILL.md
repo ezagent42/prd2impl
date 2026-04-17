@@ -52,16 +52,29 @@ Analyze the task graph and recommend the best next task(s) to work on.
 
 ### Step 3: Find Executable Tasks
 
-A task is **executable** if:
-- Status is `pending` (⬜)
-- All `depends_on` tasks are `completed` (🟩)
+**CRITICAL: Only recommend tasks with status `pending` (⬜). NEVER recommend tasks that are `completed` (🟩), `in_progress` (🟦), `blocked` (⚠️), or `failed` (🟥).**
+
+A task is **executable** if ALL of these are true:
+- Status is EXACTLY `pending` (⬜) — reject any other status
+- All `depends_on` tasks have status EXACTLY `completed` (🟩)
 - No items in `blocked_by` are active
 - Task line matches developer's line or is `shared`
 
+**Parsing task-status.md (fallback mode):**
+When reading markdown tables, pay careful attention to the status column emoji:
+- ⬜ = pending (ONLY these are candidates)
+- 🟦 = in_progress (SKIP)
+- 🟩 = completed (SKIP)
+- ⚠️ = blocked (SKIP)
+- 🟥 = failed (SKIP)
+
+If unsure about a task's status, re-read the specific row. Do NOT guess.
+
 Algorithm:
 1. Load all tasks
-2. Filter to pending + dependencies satisfied + matching line
-3. Sort by priority:
+2. **First pass: collect ONLY tasks where status column is ⬜ pending** — discard everything else
+3. **Second pass: from the pending set**, filter to dependencies satisfied + matching line
+4. Sort by priority:
    a. **Critical path first**: Tasks on the critical path get top priority
    b. **Type priority**: Green > Yellow > Red (Green can be started immediately without waiting)
    c. **Phase order**: Earlier phase tasks before later ones
@@ -75,7 +88,10 @@ Before presenting the recommendation, check for:
 - **Blocked tasks that became unblocked**: Tasks that were blocked but whose blocker was recently resolved
 - **Overdue milestones**: If current date > milestone target date and tasks remain
 
-### Step 5: Present Recommendations
+### Step 5: Verify & Present Recommendations
+
+**Before outputting, verify each recommended task:**
+For each task in your recommendation list, re-read its row in task-status.md and confirm the status emoji is ⬜. If it's not ⬜, remove it from the list. This catches parsing errors.
 
 Output a table of up to 5 recommended tasks:
 
