@@ -55,6 +55,11 @@ properties:
         type:
           type: string
           enum: [code, test, doc, config]
+  may_touch:
+    type: array
+    items:
+      type: string
+    description: "Files this task might modify beyond deliverables (e.g. __init__.py, config files). Used by batch-dispatch for conflict prediction."
   verification:
     type: string
     description: "How to verify this task is complete"

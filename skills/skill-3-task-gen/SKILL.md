@@ -62,9 +62,12 @@ tasks:
     blocked_by: []    # External blockers (not task deps)
     deliverables:
       - path: "autoservice/conversation_engine/mode_gate.py"
-        type: code
+        type: code       # code | test | doc | config
       - path: "tests/unit/test_mode_gate.py"
         type: test
+    may_touch:             # Files this task might modify beyond deliverables
+      - "autoservice/conversation_engine/__init__.py"  # Add import
+      - "autoservice/config.yaml"                       # Add config entry
     verification: "pytest tests/unit/test_mode_gate.py — all green"
     estimated_effort: small  # small (<2h) | medium (2-8h) | large (>8h)
     status: pending

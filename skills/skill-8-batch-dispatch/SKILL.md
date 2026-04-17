@@ -87,6 +87,82 @@ Dispatch 3 of 5 tasks? (y/n)
 Or wait for T1A.4 to complete first.
 ```
 
+#### 2c. File conflict prediction (MANDATORY)
+
+Before dispatching, predict which files each task will modify and detect overlaps.
+
+**Step 1 — Build per-task file footprint:**
+
+For each task, collect its **predicted file set** from 3 sources:
+
+| Source | Method | Confidence |
+|--------|--------|-----------|
+| **Explicit deliverables** | Read `deliverables[].path` from tasks.yaml | High |
+| **Module init files** | For each deliverable dir, add `__init__.py` if it exists | High |
+| **Import dependents** | Grep codebase for `from {module} import` or `import {module}` to find files that import the deliverable module — these may need updating | Medium |
+
+Also add **known shared files** that every task might touch:
+- `docs/plans/task-status.md` — expected, handled by sequential merge
+- `.artifacts/registry.json` — expected, handled by sequential merge
+
+**Step 2 — Detect overlaps:**
+
+Build an overlap matrix:
+```
+File Overlap Matrix:
+                    T1A.3    T1A.6    T1A.7
+engine/__init__.py    ✗        ✗        ✗      ← 3-way conflict!
+plugins/__init__.py   -        ✗        ✗      ← 2-way conflict
+mode_gate.py          ✗        -        -      ← no conflict
+placeholder.py        -        ✗        -      ← no conflict
+lifecycle.py          -        -        ✗      ← no conflict
+```
+
+**Step 3 — Classify and act:**
+
+| Overlap Type | Action |
+|-------------|--------|
+| **No overlap** | Safe to dispatch in parallel |
+| **Shared `__init__.py` only** | Warn but allow — these are usually additive (import lines), easy to merge |
+| **Same business logic file** | BLOCK parallel dispatch — must run sequentially |
+| **Known shared files** (task-status.md, registry.json) | Allow — these are expected; merge sequentially after all agents complete |
+
+**Output conflict report before dispatching:**
+
+```
+## File Conflict Analysis
+
+✅ No conflicts: T1A.3, T1A.7 — safe to parallel
+⚠️ Low-risk overlap: T1A.3 ↔ T1A.6 share engine/__init__.py (import-only, likely additive)
+❌ High-risk overlap: T2A.1 ↔ T2A.3 both modify autoservice/sla_aggregator.py
+
+Recommendation:
+  Wave 1: T1A.3, T1A.7 (parallel)
+  Wave 2: T1A.6 (after wave 1, to avoid __init__.py conflict)
+  Sequential: T2A.1 then T2A.3 (same file)
+
+Proceed with this plan? (y / adjust / cancel)
+```
+
+**Step 4 — Inject file boundaries into agent prompts:**
+
+For each agent, add to its prompt:
+```
+## File Boundaries (CRITICAL)
+You MUST only modify these files:
+- {deliverable_1}
+- {deliverable_2}
+- {test_file}
+
+You MUST NOT modify these files (other agents are working on them):
+- {conflicting_file_1}
+- {conflicting_file_2}
+
+If you need to modify a file outside your boundary, STOP and report instead of editing.
+```
+
+This prevents agents from making unexpected changes that cause merge conflicts.
+
 ### Step 3: Update Status
 
 For all tasks that pass pre-flight:
