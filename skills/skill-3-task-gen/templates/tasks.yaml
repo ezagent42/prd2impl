@@ -20,7 +20,7 @@ tasks:
   - id: T0S.1
     name: "{Task name}"
     description: "{What this task does}"
-    line: S           # A | B | S
+    line: shared      # Line identifier from project.yaml, or 'shared'
     type: red         # green | yellow | red
     phase: P0
     module: MOD-01

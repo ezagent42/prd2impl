@@ -19,7 +19,7 @@ Analyze the task graph and recommend the best next task(s) to work on.
 
 ## Input
 
-- **Optional**: Identity hint (e.g., `DevA`, `DevB`), inferred from git branch if not provided
+- **Optional**: Identity hint (e.g., `Dev1`, `Alice`), inferred from git branch if not provided
 - **Data sources**:
   1. `docs/plans/tasks.yaml` (preferred)
   2. `docs/plans/task-status.md` (fallback)
@@ -31,9 +31,9 @@ Analyze the task graph and recommend the best next task(s) to work on.
 
 1. Check user-provided identity argument
 2. If not provided, infer from git branch:
-   - `dev-a` → DevA (Line A)
-   - `dev-b` → DevB (Line B)
-   - Other → ask user
+   - Match branch name against `project.yaml` team entries
+   - If only 1 team member → auto-select
+   - If no match → ask user to pick from team list
 
 ### Step 2: Check In-Progress Tasks
 
@@ -56,7 +56,7 @@ A task is **executable** if:
 - Status is `pending` (⬜)
 - All `depends_on` tasks are `completed` (🟩)
 - No items in `blocked_by` are active
-- Task line matches developer's line (A/B) or is shared (S)
+- Task line matches developer's line or is `shared`
 
 Algorithm:
 1. Load all tasks
@@ -108,10 +108,11 @@ Consider batch dispatch: /batch-dispatch batch-2
 
 ## Edge Cases
 
-- **No tasks available**: All remaining tasks are blocked or belong to another line
-  → Report blocked status and suggest checking with the other developer
+- **No tasks available**: All remaining tasks are blocked or belong to other lines
+  → Report blocked status and suggest checking with other team members
 - **Only Red tasks left**: All Green/Yellow done, only Red remain
   → Present Red tasks with their decision questions
 - **All tasks complete**: Congratulations! Suggest `/smoke-test {current-milestone}`
-- **Cross-line task**: If a shared (S) task is available and no line-specific tasks are
+- **Cross-line task**: If a `shared` task is available and no line-specific tasks are
   → Suggest the shared task with a note about coordination
+- **Solo developer**: Skip line filtering entirely, show all executable tasks

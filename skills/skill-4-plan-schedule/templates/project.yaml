@@ -15,29 +15,40 @@ project:
   target_end: null  # Set a deadline or leave null for estimate-based planning
 
   # Team configuration
+  # Define as many lines as you need. Each line is an independent work stream.
+  # Examples:
+  #   - Solo dev: 1 line (no parallel)
+  #   - Pair: 2 lines (backend + frontend, or feature-A + feature-B)
+  #   - Squad: 3+ lines (backend + frontend + infra, etc.)
   team:
-    - id: DevA
-      name: "{Developer A name}"
-      line: A
-      branch: dev-a
-      skills: [backend, engine, business-logic]
+    - id: Dev1
+      name: "{Developer 1 name}"
+      line: main           # Line identifier (any short string)
+      branch: dev           # Git branch for this line
+      skills: [backend, frontend]  # Skill tags for task assignment
 
-    - id: DevB
-      name: "{Developer B name}"
-      line: B
-      branch: dev-b
-      skills: [frontend, delivery, devops]
+    # Uncomment to add more lines:
+    # - id: Dev2
+    #   name: "{Developer 2 name}"
+    #   line: frontend
+    #   branch: dev-frontend
+    #   skills: [frontend, delivery]
+    #
+    # - id: Dev3
+    #   name: "{Developer 3 name}"
+    #   line: infra
+    #   branch: dev-infra
+    #   skills: [devops, infrastructure]
 
   # Work parameters
   work_hours_per_day: 8
-  parallel_capacity: 2  # How many lines work simultaneously
+  parallel_capacity: 1  # Number of lines that work simultaneously
 
   # Branch strategy
   branches:
     main: main           # Production branch
     integration: dev     # Integration branch (milestone merges go here)
-    line_a: dev-a        # Line A development branch
-    line_b: dev-b        # Line B development branch
+    # Line branches are defined per-team-member above
 
   # SLA for reviews and decisions
   sla:

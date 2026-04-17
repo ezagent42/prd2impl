@@ -132,6 +132,16 @@ PRD document
 | Yellow | `yellow` | AI drafts, human reviews | Draft → review checklist → approval/rejection |
 | Red | `red` | Human-driven decisions | Draft + decision questions → human decides → commit |
 
+## Team Configuration
+
+The plugin supports **any team size** — solo, pair, or squad. Team lines are defined in `project.yaml` during `/plan-schedule`:
+
+- **Solo** (1 line): All tasks assigned to one person, sequential execution
+- **Pair** (2 lines): e.g. backend + frontend, parallel execution
+- **Squad** (3+ lines): e.g. backend + frontend + infra, max parallelism
+
+The plugin asks for your team structure during setup. No hardcoded assumptions.
+
 ## Integration
 
 Works best with these companion plugins:

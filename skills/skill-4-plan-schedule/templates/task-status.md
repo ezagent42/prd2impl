@@ -32,5 +32,6 @@
 1. **Owner 字段**只在任务 `in_progress` 时填写；完成后可保留
 2. **状态流转**: `⬜ → 🟦 → 🟩`（正常）或 `⬜ → 🟦 → ⚠️`（阻塞）或 `🟦 → 🟥`（失败待重做）
 3. **关联 artifact 字段**随 dev-loop 推进填充
-4. **每次修改** commit message 格式: `task: T0.1 → in_progress (DevA)`
+4. **每次修改** commit message 格式: `task: T0.1 → in_progress ({owner})`
 5. **冲突规避**: 用 Edit 精确替换单行，避免整表重写
+6. **多线并行**: 每条 line 只改自己 line 的任务行；共享任务需 review

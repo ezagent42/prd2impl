@@ -38,7 +38,7 @@ For each gap, generate one or more tasks:
 
 **Task ID Convention**: `T{Phase}{Line}.{Seq}`
 - Phase: 0-9 (milestone/phase number)
-- Line: A (backend) / B (frontend) / S (shared)
+- Line: identifier from `project.yaml` team config (e.g. `A`, `front`, `infra`), or `S` for shared/cross-line
 - Seq: sequential within phase+line
 
 **Classification Rules**:
@@ -52,7 +52,7 @@ tasks:
   - id: T1A.1
     name: "Mode/Gate minimal implementation"
     description: "Implement state machine for conversation modes and gate transitions"
-    line: A          # A | B | S (shared)
+    line: backend    # Line identifier from project.yaml, or 'shared'
     type: green      # green | yellow | red
     phase: P1
     module: MOD-01
@@ -120,9 +120,10 @@ phases:
 ### Step 5: Line Assignment
 
 If `project.yaml` defines team lines, assign tasks:
-- Check each task's module → which line owns that module
+- Check each task's module → which line owns that module (match module skills to line skills)
 - Check deliverable file paths → which line's directory
-- Cross-cutting tasks → assign to `S` (shared) with designated driver
+- Cross-cutting tasks → assign to `shared` with designated driver
+- If only 1 line defined → assign all tasks to that line (no splitting needed)
 
 ### Step 6: Statistics & Warnings
 
@@ -135,9 +136,10 @@ summary:
     yellow: 18 (24%)
     red: 9 (12%)
   by_line:
-    A: 43
-    B: 29
-    S: 3
+    # Dynamic — one entry per line from project.yaml
+    backend: 43
+    frontend: 29
+    shared: 3
   by_phase:
     P0: 6
     P1: 17
@@ -149,7 +151,7 @@ summary:
 warnings:
   - "T3A.4 (Red) blocks 3 downstream tasks — start early"
   - "P5 has 8 tasks depending on external zchat API (DEP-01)"
-  - "Line A has 48% more tasks than Line B — consider rebalancing"
+  - "Line 'backend' has 48% more tasks than 'frontend' — consider rebalancing"
 ```
 
 ### Step 7: Output

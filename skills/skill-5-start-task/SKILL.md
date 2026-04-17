@@ -51,9 +51,9 @@ Launch a specific task, verify its prerequisites, update the status tracker, and
 
 1. Set task status to `in_progress` (🟦)
 2. Set owner based on current git branch:
-   - Branch `dev-a` or containing `dev-a` → DevA
-   - Branch `dev-b` or containing `dev-b` → DevB
-   - Other → ask user for identity
+   - Match branch name against `project.yaml` team entries (each member has a `branch` field)
+   - If no match found → ask user to identify themselves from the team list
+   - If `project.yaml` has only 1 team member → auto-assign
 3. Update `tasks.yaml` (if exists) and `task-status.md`
 4. Commit: `task: {ID} → in_progress ({Owner})`
 

@@ -28,26 +28,40 @@ Organize tasks into time-boxed batches with parallel assignment, milestone gates
 ### Step 1: Load Tasks & Project Config
 
 1. Find the most recent `tasks.yaml`
-2. Load or create `project.yaml` with defaults:
+2. Load or create `project.yaml`. If it doesn't exist, **ask the user**:
+   - How many team lines / work streams? (1 = solo, 2 = pair, 3+ = squad)
+   - For each line: id, name, skills, branch name
+   - Target timeline constraints?
+   
+   Then generate `project.yaml` from their answers. Example for a solo developer:
    ```yaml
    project:
-     name: "Project Name"
-     start_date: "2026-04-17"
-     target_end: null  # Or specific deadline
      team:
-       - id: DevA
-         line: A
-         branch: dev-a
-         skills: [backend, engine]
-       - id: DevB
-         line: B
-         branch: dev-b
-         skills: [frontend, delivery]
-     work_hours_per_day: 8
-     parallel_capacity: 2  # How many lines work simultaneously
+       - id: Dev1
+         line: main
+         branch: dev
+         skills: [fullstack]
+     parallel_capacity: 1
    ```
-
-3. If `project.yaml` doesn't exist, ask the user for team configuration
+   
+   Example for a 3-person squad:
+   ```yaml
+   project:
+     team:
+       - id: Alice
+         line: backend
+         branch: dev-backend
+         skills: [backend, engine]
+       - id: Bob
+         line: frontend
+         branch: dev-frontend
+         skills: [frontend, delivery]
+       - id: Carol
+         line: infra
+         branch: dev-infra
+         skills: [devops, database]
+     parallel_capacity: 3
+   ```
 
 ### Step 2: Topological Sort & Critical Path
 
@@ -64,14 +78,15 @@ Group tasks into batches. A batch is a set of tasks that can be worked on in par
 **Rules**:
 - All tasks in a batch must have dependencies satisfied by earlier batches
 - Each developer works on at most 1 task at a time within a batch
-- Batch size ≤ team_size × 3 (to allow sequential work within a batch)
+- Batch size ≤ number_of_lines × 3 (to allow sequential work within a batch)
 - Red tasks that block many downstream tasks should start in earlier batches (even if their phase is later)
+- If only 1 line: batches are sequential; if multiple lines: batches can have parallel tasks across lines
 
 **Algorithm**:
 1. Start from topological level 0 (no dependencies)
 2. Group by level, then split into batches respecting capacity
 3. Apply Red-task preemption: move Red tasks earlier if they're on the critical path
-4. Balance workload across lines (A/B should have roughly equal work per batch)
+4. Balance workload across lines (each line should have roughly equal work per batch)
 
 Output:
 ```yaml
@@ -84,12 +99,12 @@ batches:
       duration: "3 hours"
     tasks:
       - id: T0.1
-        driver: DevA
-        reviewer: DevB
+        driver: Dev1
+        reviewer: Dev2
         mode: pair  # pair | solo | parallel
       - id: T0.2
-        driver: DevB
-        reviewer: DevA
+        driver: Dev2
+        reviewer: Dev1
         mode: pair
     pre_check: "None (first batch)"
     gate: "Contract files committed and reviewed"
@@ -102,10 +117,10 @@ batches:
       duration: "2 hours"
     tasks:
       - id: T0.4
-        owner: DevA
+        owner: Dev1
         mode: solo
       - id: T0.6
-        owner: DevB
+        owner: Dev2
         mode: parallel  # Can work simultaneously with T0.4
     pre_check: "M0 contracts committed"
     gate: "Skeleton compiles, make check passes"

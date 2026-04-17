@@ -6,8 +6,8 @@ required: [id, name, line, type, phase, depends_on, deliverables, verification, 
 properties:
   id:
     type: string
-    pattern: "^T\\d+[ABS]\\.\\d+$"
-    description: "Task ID in format T{Phase}{Line}.{Seq}"
+    pattern: "^T\\d+\\w+\\.\\d+$"
+    description: "Task ID in format T{Phase}{Line}.{Seq}, e.g. T1A.3, T2front.1"
   name:
     type: string
     minLength: 3
@@ -16,8 +16,7 @@ properties:
     type: string
   line:
     type: string
-    enum: [A, B, S]
-    description: "A=backend, B=frontend, S=shared"
+    description: "Line identifier matching a team line from project.yaml, or 'shared' for cross-line tasks"
   type:
     type: string
     enum: [green, yellow, red]

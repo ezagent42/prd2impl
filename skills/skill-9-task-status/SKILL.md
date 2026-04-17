@@ -60,9 +60,11 @@ by_type:
   red: { total: 9, completed: 4, pct: 44 }
 
 by_line:
-  A: { total: 43, completed: 38, pct: 88 }
-  B: { total: 29, completed: 24, pct: 83 }
-  S: { total: 3, completed: 2, pct: 67 }
+  # Dynamic — one entry per line from project.yaml
+  # Example for 2-line team:
+  backend: { total: 43, completed: 38, pct: 88 }
+  frontend: { total: 29, completed: 24, pct: 83 }
+  shared: { total: 3, completed: 2, pct: 67 }
 ```
 
 ### Step 3: Identify Issues
@@ -78,7 +80,7 @@ by_line:
 **Risk alerts**:
 - Tasks behind schedule (compare with execution-plan timeline)
 - Red tasks not yet started that block upcoming milestones
-- Imbalanced workload between lines
+- Imbalanced workload between lines (only when multiple lines exist)
 
 ### Step 4: Generate Dashboard
 
@@ -101,7 +103,7 @@ P5 zchat        ████░░░░░░  31% (4/13)  ⚠️ 9 blocked
 ## Active Tasks
 | Task | Name | Owner | Duration | Status |
 |------|------|-------|----------|--------|
-| T3B.7 | Management chat | DevA | 2h | 🟦 in progress |
+| T3B.7 | Management chat | Dev1 | 2h | 🟦 in progress |
 
 ## Blocked Tasks
 | Task | Blocker | Impact |

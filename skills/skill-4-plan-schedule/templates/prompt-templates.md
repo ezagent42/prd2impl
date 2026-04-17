@@ -125,7 +125,7 @@ rejected {Tx.x}: {原因} → 改 🟥 + 重做
 ## 9. 新会话接续
 
 ```
-我是 {DevA|DevB}，继续项目的 {A|B} 线开发。
+我是 {team member id}，继续项目的 {line name} 线开发。
 请先读 task-status 找我的 🟦 任务，告诉我进度和下一步。
 ```
 

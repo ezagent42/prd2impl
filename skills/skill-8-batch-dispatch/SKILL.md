@@ -63,7 +63,7 @@ Or wait for T1A.4 to complete first.
 
 For all tasks that pass pre-flight:
 1. Mark as `in_progress` (🟦) in task-status
-2. Assign owner based on task line (DevA for A-line, DevB for B-line)
+2. Assign owner based on task line (match to team member from `project.yaml`)
 3. Commit: `task: batch-{N} dispatch — {IDs} → in_progress`
 
 ### Step 4: Construct Agent Prompts
@@ -112,7 +112,7 @@ For Yellow tasks: run_in_background=true (they'll stop at review checkpoint)
 - Maximum 5 concurrent agents (to avoid resource contention)
 - If >5 tasks, dispatch in waves
 - Each agent uses `isolation: "worktree"` to avoid file conflicts
-- Group agents by line (A-line tasks don't conflict with B-line tasks)
+- Group agents by line (tasks on different lines don't conflict)
 
 ### Step 6: Monitoring Dashboard
 

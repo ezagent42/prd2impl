@@ -7,21 +7,18 @@ generated_date: "{YYYY-MM-DD}"
 tasks_source: "{path to tasks.yaml}"
 
 # ── Project Configuration ────────────────────────────────
+# Copied from project.yaml at generation time
 project:
   name: "{Project Name}"
   start_date: "{YYYY-MM-DD}"
   target_end: "{YYYY-MM-DD or null}"
   team:
-    - id: DevA
-      line: A
-      branch: dev-a
-      skills: [backend]
-    - id: DevB
-      line: B
-      branch: dev-b
-      skills: [frontend]
-  work_hours_per_day: 8
-  parallel_capacity: 2
+    # Dynamic — populated from project.yaml
+    - id: Dev1
+      line: main
+      branch: dev
+      skills: [fullstack]
+  parallel_capacity: 1
 
 # ── Batches ──────────────────────────────────────────────
 batches:
@@ -33,8 +30,8 @@ batches:
       duration: "3 hours"
     tasks:
       - id: T0S.1
-        owner: DevA
-        mode: pair  # pair | solo | parallel
+        owner: Dev1
+        mode: solo  # pair | solo | parallel
     pre_check: "{What must be true before starting}"
     gate: "{What must be true after completion}"
 

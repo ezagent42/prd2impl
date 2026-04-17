@@ -103,7 +103,7 @@ Identify recurring patterns:
 **Velocity trends**:
 - Did tasks get faster or slower as the milestone progressed?
 - Any correlation between task type and cycle time?
-- Line A vs Line B velocity comparison
+- Cross-line velocity comparison (if multiple lines)
 
 **Quality signals**:
 - How many tasks had to be redone?
@@ -122,7 +122,7 @@ Actual: Wed 04-15 13:00 - 18:30 (5.5 hours, +37%)
 ## What Went Well
 - All 13 Green tasks completed efficiently (median 35 min)
 - No tasks failed and needed redo
-- Line A and B worked in parallel without conflicts
+- All lines worked in parallel without conflicts
 - Contract tests caught 2 issues early
 
 ## What Didn't Go Well
