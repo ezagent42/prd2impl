@@ -40,24 +40,31 @@ Launch multiple tasks in parallel using Claude Code's Agent tool. Verify all pre
 
 ### Step 2: Pre-flight Checks
 
-#### 2a. Branch freshness (MANDATORY — do this FIRST)
+#### 2a. Worktree base branch (MANDATORY — do this FIRST)
 
-Worktrees inherit the base branch HEAD. Stale base = stale agents = merge conflicts. **Always sync before dispatch.**
+Worktrees inherit the base branch HEAD. **Default base is `dev` (integration branch from `project.yaml`).**
 
 1. Run `git fetch origin`
-2. Check current branch: `git branch --show-current`
-3. Compare: `git log HEAD..origin/{branch} --oneline`
-4. **If behind remote → auto-pull**:
+2. Determine base branch:
+   - **Default**: use `dev` (or `project.yaml` → `branches.integration`)
+   - **If current branch is NOT `dev`**: warn and ask user to confirm:
+     ```
+     ⚠️ Current branch is '{branch}', not 'dev'.
+     Worktrees will be created from 'dev' (default).
+     
+     Continue with 'dev'? Or use '{branch}' instead? (dev / {branch} / cancel)
+     ```
+3. Sync the base branch to latest remote:
    ```bash
-   git pull origin {branch}
+   git checkout dev && git pull origin dev
    ```
-   Report what was pulled:
+   Report:
    ```
-   ✅ Synced {branch}: pulled {N} commits from origin
+   ✅ Synced dev: pulled {N} commits from origin
    ```
-5. **If pull fails** (conflicts, dirty working tree): STOP dispatch, report the issue, do NOT proceed
-6. **If already up to date**: proceed silently
-7. If user specifies a different base branch, switch to it and repeat the sync
+4. **If pull fails** (conflicts, dirty tree): STOP dispatch, report the issue, do NOT proceed
+5. **If already up to date**: proceed silently
+6. All worktrees will be created from this synced base branch
 
 #### 2b. Task readiness
 
