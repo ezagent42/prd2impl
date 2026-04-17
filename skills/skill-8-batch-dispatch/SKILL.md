@@ -129,7 +129,15 @@ You are working on task {task_id} ({task_name}) in the {project_name} project.
 
 ### Step 5: Dispatch Agents
 
-Use the Agent tool to launch tasks in parallel:
+Use the Agent tool to launch tasks in parallel.
+
+**CRITICAL: Verify HEAD is on the correct base branch before dispatching.**
+Right before the first Agent call, run:
+```bash
+git branch --show-current   # Must be the base branch from Step 2a
+git log --oneline -1         # Confirm it's the expected latest commit
+```
+If HEAD is not on the expected base branch, `git checkout {base_branch}` first.
 
 ```
 For Green tasks: run_in_background=true (they can work independently)
@@ -139,8 +147,9 @@ For Yellow tasks: run_in_background=true (they'll stop at review checkpoint)
 **Dispatch rules**:
 - Maximum 5 concurrent agents (to avoid resource contention)
 - If >5 tasks, dispatch in waves
-- Each agent uses `isolation: "worktree"` to avoid file conflicts
+- Each agent uses `isolation: "worktree"` — worktree is created from current HEAD, which MUST be the synced base branch
 - Group agents by line (tasks on different lines don't conflict)
+- **Include base branch info in each agent prompt**: "Your worktree was created from `{base_branch}` at commit `{sha}`"
 
 ### Step 6: Monitoring Dashboard
 
