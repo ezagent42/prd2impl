@@ -14,12 +14,14 @@ Resume a task that's already `in_progress`, determine where it left off, and adv
 ## Trigger
 
 - User runs `/continue-task {Task ID}`
+- User runs `/continue-task {Task ID} --autopilot={green|yellow|all}`
 - User says "continue T1A.1", "resume task", "next step for T1A.1"
 - User says "approved {Task ID}" (for Yellow/Red tasks)
 
 ## Input
 
 - **Required**: Task ID
+- **Optional**: `--autopilot={green|yellow|all}` — auto-approve default decisions at STOP points. If omitted, this skill **reads `autopilot: {level}` meta from task-status.md** (set by prior `/start-task --autopilot=...` or `/autorun`). Explicit flag overrides stored meta.
 - **Context**: Current conversation history, `.artifacts/registry.json`
 
 ## Execution Flow
@@ -56,6 +58,13 @@ Check what artifacts exist for this task (in order of the pipeline):
 
 ### Step 3: Execute Next Step
 
+> **Autopilot note:** if `--autopilot={level}` was passed OR task-status
+> carries `autopilot: {level}` meta, every STOP point below is replaced by
+> an auto-proceed rule. Rules are defined in the
+> [Autopilot Mode section of skill-5-start-task](../skill-5-start-task/SKILL.md#autopilot-mode).
+> The same semantics apply here (same levels, same non-overridable
+> safeguards). Do not duplicate the table — honor it by reference.
+
 Based on detected progress:
 
 #### After eval-doc review → Test Plan
@@ -80,7 +89,10 @@ Based on detected progress:
 1. Invoke `skill-4-test-runner` (from dev-loop-skills)
 2. Run the full test suite for this task's scope
 3. If all green → proceed to closing
-4. If failures → diagnose, fix, re-run (up to 3 attempts)
+4. If failures → **diagnose via `superpowers:systematic-debugging` (if available)**,
+   fix, re-run (up to 3 attempts). The debugging skill enforces hypothesis /
+   evidence discipline instead of guess-and-patch cycles. If unavailable,
+   proceed with ad-hoc diagnosis.
 5. If still failing after 3 attempts → use diagnostic template:
    ```
    {Task ID} dev-loop failing after 3 attempts.
@@ -93,11 +105,17 @@ Based on detected progress:
    ```
 
 #### All green → Close Task
-1. Update task status: `in_progress` → `completed` (🟩)
-2. Fill artifact links in task-status (eval-doc, test-plan, test-diff, e2e-report IDs)
-3. Commit: `task: {ID} → completed`
-4. Push to the task owner's branch
-5. Recommend next available task:
+1. **Independent review (recommended):** invoke
+   `superpowers:requesting-code-review` if available. It dispatches the
+   `code-reviewer` subagent so the review is not self-graded. Receive and
+   process feedback via `superpowers:receiving-code-review` before closing.
+   On unavailable → skip and proceed (Yellow/Red tasks already have human
+   review; Green tasks will still be caught at milestone smoke-test).
+2. Update task status: `in_progress` → `completed` (🟩)
+3. Fill artifact links in task-status (eval-doc, test-plan, test-diff, e2e-report IDs)
+4. Commit: `task: {ID} → completed`
+5. Push to the task owner's branch
+6. Recommend next available task:
    ```
    Task {ID} completed! ✅
    
@@ -148,3 +166,4 @@ If the conversation context was lost (new session):
 - **Conflict with another task**: If the current task's files conflict with another in_progress task, flag immediately
 - **Missing dev-loop-skills**: If dev-loop-skills aren't installed, fall back to manual test writing (skip skill-2/3/4, do implementation directly with manual testing)
 - **Artifact registry corrupted**: Rebuild from git log + file existence checks
+- **Autopilot meta present but superpowers unavailable** (Yellow review path): if `autopilot: yellow` or `all` is set but `superpowers:requesting-code-review` cannot be invoked for a Yellow review checkpoint, **fall back to STOP** rather than self-approving the draft. Record the reason in the status update. Red tasks in `all` mode continue with default-picking since that path does not require an independent reviewer.

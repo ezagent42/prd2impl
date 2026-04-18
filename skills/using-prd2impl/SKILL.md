@@ -31,6 +31,9 @@ Phase 3: Verification & Review
   skill-10 /smoke-test      — Milestone gate verification
   skill-11 /retro           — Milestone retrospective analysis
   skill-12 /contract-check  — Contract drift detection
+
+Phase 4: Full Autopilot (optional)
+  skill-13 /autorun         — AI picks order, parallelism, and default decisions
 ```
 
 ## Routing Rules
@@ -51,6 +54,7 @@ Match the user's intent to the correct skill:
 | "Run smoke test", "verify milestone", "M1 gate check" | skill-10-smoke-test |
 | "Retrospective", "retro for M1", "what went wrong" | skill-11-retro |
 | "Check contracts", "contract drift", "schema changed" | skill-12-contract-check |
+| "Autorun", "full autopilot", "跑完所有任务", "全托管", "finish everything" | skill-13-autorun |
 | "Set up project from PRD" (full pipeline) | Start with skill-1, then chain |
 
 ## Quick Start
@@ -77,6 +81,18 @@ For **milestone gates**:
 /retro M1                           → Retrospective analysis
 ```
 
+For **full autopilot** (AI drives order, parallelism, and default decisions):
+```
+/autorun green                      → Auto-run all Green tasks (safe default)
+/autorun yellow                     → Green + Yellow (AI self-reviews Yellow via code-reviewer subagent)
+/autorun all                        → Green + Yellow + Red (AI picks defaults on design decisions; risky)
+/autorun until M1                   → Stop after milestone M1 smoke-test
+
+# Best paired with:
+claude --dangerously-skip-permissions    # truly hands-off (no tool prompts)
+# OR .claude/settings.json → permissions.defaultMode = "bypassPermissions"
+```
+
 ## Data Files Convention
 
 This plugin uses **YAML as source of truth** with markdown views:
@@ -94,9 +110,43 @@ If YAML files don't exist yet, skills will fall back to reading existing markdow
 
 ## Integration with Other Skills
 
-This plugin integrates with:
-- **dev-loop-skills** (skill-5-feature-eval, skill-2-test-plan-generator, etc.) — called during task execution
-- **superpowers:brainstorming** — called during PRD analysis and Red/Yellow tasks
-- **superpowers:writing-plans** — called during execution plan generation
-- **superpowers:dispatching-parallel-agents** — called during batch dispatch
-- **superpowers:verification-before-completion** — called during smoke tests
+prd2impl is an **orchestrator** — it owns project-level planning and task
+dispatch, and delegates testing/review/debugging nuts-and-bolts to companion
+plugins. All integrations are **optional with graceful degradation** — if a
+companion skill isn't installed, prd2impl falls back to a simpler path.
+
+### Call matrix
+
+| prd2impl stage | Companion skill invoked | Purpose | Degrades to |
+|----------------|-------------------------|---------|-------------|
+| skill-1 PRD analysis | `superpowers:brainstorming` | Surface ambiguity before YAML extraction | Direct extraction without interactive clarification |
+| skill-4 plan-schedule | `superpowers:writing-plans` | Structured plan authoring | In-skill template-based plan |
+| skill-5 start-task (Red) | `superpowers:brainstorming` | Ground design-decision questions in trade-off exploration | Direct question drafting |
+| skill-5 start-task (Green/Yellow, impl step) | `superpowers:test-driven-development` | Enforce red/green/refactor rhythm | Ad-hoc implementation ordering |
+| skill-5 start-task (Green) | `dev-loop-skills:skill-5-feature-eval` (simulate) | Produce eval-doc | Skill-5 still stops for user review without structured eval |
+| skill-6 continue-task (plan→code→run) | `dev-loop-skills:skill-2/3/4` | test-plan → pytest code → regression-aware report | Manual test writing |
+| skill-6 continue-task (on test fail) | `superpowers:systematic-debugging` | Hypothesis/evidence-driven diagnosis | Ad-hoc debugging |
+| skill-6 continue-task (on close) | `superpowers:requesting-code-review` + `receiving-code-review` | Independent per-task review via code-reviewer subagent | Skip review; rely on milestone-level catch |
+| skill-8 batch-dispatch | `superpowers:dispatching-parallel-agents` | Parallel subagent launch with isolation | Sequential launch |
+| skill-10 smoke-test | `superpowers:requesting-code-review` + `verification-before-completion` | Independent milestone review + evidence-based GO/NO-GO | Automated-test-only gate |
+| skill-13 autorun (yellow/all) | `superpowers:requesting-code-review` | Independent review of Yellow drafts (replaces human STOP) | Yellow tasks fall back to STOP; autorun skips them rather than self-approving |
+
+### Companion plugin summary
+
+- **dev-loop-skills** — owns the **testing pipeline**: eval-doc, test-plan,
+  test-code, test-runner (with new-vs-regression classification), and the
+  `.artifacts/` registry. Missing → tasks skip automated test pipeline.
+- **superpowers** — owns **method and discipline**: brainstorming, plan
+  writing, TDD rhythm, systematic debugging, independent code review,
+  parallel agent dispatch, verification-before-completion. Missing →
+  planning/execution phases are simpler but functional.
+
+### Artifact directory ownership
+
+When both companions are installed, `.artifacts/` subdirectories are split:
+
+| Owner | Subdirectory | Content |
+|-------|-------------|---------|
+| dev-loop-skills | `test-plans/`, `test-diffs/`, `e2e-reports/`, `eval-docs/` | Per-task testing artifacts |
+| prd2impl | `tasks/`, `milestones/`, `retros/`, `contract-checks/` | Project-level artifacts |
+| shared | `registry.json` | Cross-skill artifact index (dev-loop writes, prd2impl reads) |
