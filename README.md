@@ -1,6 +1,6 @@
 # prd2impl
 
-PRD-to-Implementation pipeline for Claude Code. A 12-skill plugin that takes you from a Product Requirements Document through gap analysis, task generation, execution planning, and all the way to milestone verification.
+PRD-to-Implementation pipeline for Claude Code. A 13-skill plugin that takes you from a Product Requirements Document (or existing hand-written docs) through gap analysis, task generation, execution planning, and all the way to milestone verification.
 
 ## Installation
 
@@ -31,7 +31,8 @@ Or if published to a marketplace:
 After installing, the following skills should appear in `/help`:
 
 ```
-prd2impl:prd-analyze       — Structured PRD extraction
+prd2impl:ingest-docs        — Ingest human-authored MDs (Entry B)
+prd2impl:prd-analyze       — Structured PRD extraction (Entry A)
 prd2impl:gap-scan           — Codebase vs PRD gap analysis
 prd2impl:task-gen           — Task generation with dependencies
 prd2impl:plan-schedule      — Execution plan & batch scheduling
@@ -47,13 +48,33 @@ prd2impl:contract-check     — Contract drift detection
 
 ## Quick Start
 
-### New project from PRD
+### Entry A — New project from a PRD document
 
 ```
 /prd-analyze docs/prd/my-prd.md    # Step 1: Parse PRD → structured YAML
 /gap-scan                           # Step 2: Scan code vs requirements
 /task-gen                           # Step 3: Generate task breakdown
 /plan-schedule                      # Step 4: Create execution plan
+```
+
+### Entry B — Project already has hand-written docs
+
+Use this when you already have gap analyses, design specs, or plans in Markdown.
+Entry A and Entry B are **mutually exclusive** — pick one per project.
+
+```
+/ingest-docs gap.md design-spec.md plan.md
+                                    # Step 1: Classify + extract → 3 YAMLs
+                                    #   prd-structure.yaml
+                                    #   gap-analysis.yaml
+                                    #   task-hints.yaml  (preserves file-change granularity)
+/task-gen                           # Step 2: Generate tasks (reads task-hints.yaml automatically)
+/plan-schedule                      # Step 3: Create execution plan
+```
+
+Force a role when auto-detection is uncertain:
+```
+/ingest-docs a.md b.md --tag spec=a.md --tag gap=b.md
 ```
 
 Each step has a **human review checkpoint** — the pipeline pauses and waits for your approval before advancing.
@@ -85,7 +106,16 @@ Each step has a **human review checkpoint** — the pipeline pauses and waits fo
 ## Pipeline Overview
 
 ```
-Phase 1: Upstream Analysis (PRD → Tasks)
+Entry B: Document Ingestion (alternative to Entry A)
+┌─────────────────────────────────────────────────────┐
+│ /ingest-docs gap.md spec.md plan.md                  │
+│ Skill 0 · role-detect → extract → cross-validate     │
+│ → prd-structure.yaml + gap-analysis.yaml             │
+│ → task-hints.yaml  (new: preserves file granularity) │
+└─────────────────────────────────────────────────────┘
+       ↓ review (3 checkpoints)              ↘
+                                              ↓ (merge at skill-3)
+Entry A: Upstream Analysis (PRD → Tasks)      ↓
 ┌─────────────┐    ┌──────────┐    ┌──────────┐    ┌──────────────┐
 │ /prd-analyze │ →  │ /gap-scan │ →  │ /task-gen │ →  │/plan-schedule│
 │ Skill 1      │    │ Skill 2   │    │ Skill 3   │    │ Skill 4      │
@@ -113,9 +143,19 @@ Phase 3: Verification & Review
 This plugin uses **YAML as source of truth** with markdown as human-readable views:
 
 ```
-PRD document
+Entry A (PRD document):
   → prd-structure.yaml     (Skill 1)
   → gap-analysis.yaml      (Skill 2)
+  → [no task-hints.yaml]
+  → tasks.yaml             (Skill 3)
+
+Entry B (hand-written MDs):
+  → prd-structure.yaml     (Skill 0, source_type: "ingested")
+  → gap-analysis.yaml      (Skill 0, source_type: "ingested")
+  → task-hints.yaml        (Skill 0 — NEW: preserves file_changes + steps + non_goals)
+  → tasks.yaml             (Skill 3 — uses task-hints.yaml when present)
+
+Both entries converge at Skill 3:
   → tasks.yaml             (Skill 3, source of truth for all tasks)
   → execution-plan.yaml    (Skill 4)
   → task-status.md         (auto-generated view from tasks.yaml)
@@ -144,12 +184,55 @@ The plugin asks for your team structure during setup. No hardcoded assumptions.
 
 ## Integration
 
-Works best with these companion plugins:
+prd2impl is the **orchestrator layer**. It leans on two companion plugins for
+execution-layer capabilities. Both are **optional with graceful degradation**.
 
-- **dev-loop-skills** — Provides eval-doc, test-plan, test-code, test-runner pipeline
-- **superpowers** — Provides brainstorming, writing-plans, parallel dispatch, verification
+### Companion plugins
 
-Both are optional. Without dev-loop-skills, tasks skip the automated test pipeline. Without superpowers, the planning phase is simpler but still functional.
+| Plugin | Owns | Used by prd2impl for | Missing → degrades to |
+|--------|------|----------------------|------------------------|
+| **dev-loop-skills** | Testing pipeline + `.artifacts/` | eval-doc, test-plan, test-code, test-runner (new-vs-regression reports) | Manual test writing, no regression classification |
+| **superpowers** | Method & discipline | Brainstorming, plan writing, TDD rhythm, systematic debugging, independent code review, parallel subagent dispatch, verification-before-completion | Simpler planning; ad-hoc impl/debug; milestone-only review |
+
+### Capability matrix (what prd2impl gains from each)
+
+| Capability | Native | Via superpowers | Via dev-loop |
+|------------|--------|-----------------|--------------|
+| PRD → tasks → milestones | ✅ | — | — |
+| Requirement clarification (brainstorm) | — | ✅ skill-1, skill-5 (Red) | — |
+| Plan authoring | partial | ✅ skill-4 | — |
+| TDD discipline (rhythm) | — | ✅ skill-5, skill-6 | — |
+| Test plan generation | — | — | ✅ skill-6 |
+| Test code generation (pytest) | — | — | ✅ skill-6 |
+| Test execution + regression detection | — | — | ✅ skill-6 |
+| Systematic debugging on test fail | — | ✅ skill-6 | — |
+| Independent code review (subagent) | — | ✅ skill-6, skill-10 | — |
+| Parallel subagent dispatch | — | ✅ skill-8 | — |
+| Evidence-based gate decision | — | ✅ skill-10 | — |
+| Artifact registry (`.artifacts/`) | — | — | ✅ cross-cutting |
+
+### Installation recommendation
+
+- **Minimum (PRD + tasks only)**: prd2impl alone
+- **Recommended (test-driven delivery)**: prd2impl + dev-loop-skills + superpowers
+- **Lite (small team, no formal tests)**: prd2impl + superpowers
+
+### Shared `.artifacts/` layout
+
+When all three plugins are installed, directory ownership:
+
+```
+.artifacts/
+├── registry.json           # dev-loop writes, prd2impl reads
+├── eval-docs/              # dev-loop
+├── test-plans/             # dev-loop
+├── test-diffs/             # dev-loop
+├── e2e-reports/            # dev-loop
+├── tasks/                  # prd2impl
+├── milestones/             # prd2impl
+├── retros/                 # prd2impl
+└── contract-checks/        # prd2impl
+```
 
 ## Backward Compatibility
 
@@ -165,12 +248,18 @@ prd2impl/
 ├── package.json                 # NPM metadata
 ├── skills/
 │   ├── using-prd2impl/          # Router skill (entry point)
-│   ├── skill-1-prd-analyze/     # PRD structured extraction
+│   ├── skill-0-ingest/          # Heterogeneous MD ingestion (Entry B)
+│   │   ├── SKILL.md             #   4-phase orchestration
+│   │   ├── lib/                 #   role-detector, gap/spec/prd-extractor, cross-validator
+│   │   ├── schemas/             #   task-hints.schema.yaml + examples
+│   │   ├── templates/           #   role-confirmation.md
+│   │   └── tests/               #   fixtures + expected outputs
+│   ├── skill-1-prd-analyze/     # PRD structured extraction (Entry A)
 │   │   ├── SKILL.md
 │   │   ├── templates/
 │   │   └── references/
 │   ├── skill-2-gap-scan/        # Codebase gap analysis
-│   ├── skill-3-task-gen/        # Task generation
+│   ├── skill-3-task-gen/        # Task generation (reads task-hints.yaml when present)
 │   │   ├── SKILL.md
 │   │   ├── templates/
 │   │   └── schemas/
