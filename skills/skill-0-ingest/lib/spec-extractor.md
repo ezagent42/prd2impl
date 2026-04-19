@@ -15,11 +15,13 @@ Scan the document for section headings that match these patterns (case-insensiti
 
 | Section type | Heading patterns | Maps to field |
 |---|---|---|
-| File changes | "File Changes", "Files Changed", "文件变更", "Changed Files" | `file_changes[]` |
-| Implementation steps / order | "Implementation Steps", "Implementation Order", "实施步骤", "实施顺序", "Steps" | `implementation_steps[]` |
-| Non-goals | "Non-Goals", "Non Goals", "Out of Scope", "非目标", "不做" | `non_goals[]` |
+| File changes | "File Changes", "Files Changed", "文件变更", "Changed Files", "文件改动", `## N. 文件改动` | `file_changes[]` |
+| Implementation steps / order | "Implementation Steps", "Implementation Order", "实施步骤", "实施顺序", "Steps", `## N. 实施顺序` | `implementation_steps[]` |
+| Non-goals | "Non-Goals", "Non Goals", "Out of Scope", "非目标", "不做", "### 非目标" (subsection of 目标与非目标) | `non_goals[]` |
 | Test strategy / testing | "Testing", "Test Strategy", "测试策略", "Tests" | `test_strategy` |
-| Risks / open questions | "Risks", "Open Questions", "Open Risks", "风险", "待决事项" | `risks[]` |
+| Risks / open questions | "Risks", "Open Questions", "Open Risks", "风险", "开放风险", "待决事项" | `risks[]` |
+
+**Numbered section matching**: Also match headings like `## 6. 文件改动` or `## 9. 实施顺序` — strip the leading number and dot before matching keywords.
 
 Record the heading slug as `source_anchor` for each section.
 
@@ -36,14 +38,25 @@ Within the File Changes section, recognize three sub-formats:
 | `src/App.tsx` | modify | wire AdminShell |
 ```
 
-**Format B — Sub-headed lists** ("### New files", "### Modified files", "### Deleted files"):
+**Format B — Sub-headed lists** ("### New files", "### Modified files", "### Deleted files", or Chinese equivalents):
+
+Sub-heading → change_type mapping:
+| Sub-heading | change_type |
+|---|---|
+| New files / 新增 / 新文件 | `create` |
+| Modified files / 修改 / 修改文件 | `modify` |
+| Deleted files / 删除 | `delete` |
+| No-change files / 不改 / 保持不变 | `no-change` |
 
 ```markdown
-### New files
+### New files    (or: ### 新增)
 - `src/AdminShell.tsx` — root layout
 
-### Modified files
+### Modified files    (or: ### 修改)
 - `src/App.tsx` — wire AdminShell
+
+### No-change files    (or: ### 不改)
+- `src/tokens.css` — design system unchanged
 ```
 
 **Format C — Plain bullet list with inline change type**:

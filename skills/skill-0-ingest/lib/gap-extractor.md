@@ -18,12 +18,20 @@ Scan the document for item-level blocks. A gap item is any of:
 
 ```
 ### <source_id> <description> [P0|P1|P2]
+#### <source_id> <description> · P0          ← middle dot separator (U+00B7)
 ```
 
 Examples:
 - `### A-① 缺注册接入独立步骤 [P0]`
+- `#### A-① 缺"注册接入"独立步骤 · P0`         ← real AutoService format
 - `### B-⑦ Customer SDK hardcoded ws://localhost [P0]`
 - `### GAP-004 Replay job has no dedup [P1]`
+
+Priority tag detection: match `[P0]`, `[P1]`, `[P2]`, `· P0`, `· P1`, `· P2`, `·P0`, `·P1`, `·P2` (Unicode middle dot U+00B7, with or without space).
+
+source_id detection: alphanumeric prefix before first space, including circled Unicode numbers (①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰) and letter-number combinations like `A-①`, `B-⑦`, `C-⑫`.
+
+Heading level: accept H2 (`##`) through H5 (`#####`) as gap item headings. Peer level for "next item" is determined by the same heading depth as the matched item.
 
 **Pattern B — List item with priority tag**:
 
