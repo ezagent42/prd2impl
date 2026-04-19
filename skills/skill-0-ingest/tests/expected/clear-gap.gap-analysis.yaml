@@ -1,0 +1,110 @@
+# Expected output for tests/fixtures/role-detection/clear-gap.md
+# Used to verify gap-extractor correctness.
+# This is a minimal fixture (6 gaps); the real AutoService acceptance test uses 17 gaps.
+
+gap_analysis:
+  scan_date: "2026-04-19"
+  source_type: "ingested"
+  source_files:
+    - "tests/fixtures/role-detection/clear-gap.md"
+
+  summary:
+    total_gaps: 6
+    by_priority:
+      P0: 3
+      P1: 2
+      P2: 1
+    by_gap_type:
+      missing: 5
+      partial: 0
+      outdated: 1
+
+  gaps:
+    # P0 items first (canonical ID order: P0 then P1 then P2)
+    - id: GAP-001
+      source_id: "A-①"
+      source_file: "clear-gap.md"
+      source_anchor: "a--p0-missing-register-step"
+      description: "缺注册接入独立步骤"
+      module: "admin-portal-wizard"
+      priority: P0
+      gap_type: missing
+      existing_code: []
+      missing_parts:
+        - "RegisterStep component"
+        - "Country → compliance_profile mapping"
+      estimated_effort: medium
+      depends_on_gaps: []
+
+    - id: GAP-002
+      source_id: "A-②"
+      source_file: "clear-gap.md"
+      source_anchor: "a--p0-im-management-group-missing"
+      description: "IM 管理群缺失"
+      module: "channels-feishu"
+      priority: P0
+      gap_type: missing
+      existing_code: []
+      missing_parts:
+        - "Feishu management group notification on onboarding completion"
+      estimated_effort: small
+      depends_on_gaps: []
+
+    - id: GAP-003
+      source_id: "B-⑦"
+      source_file: "clear-gap.md"
+      source_anchor: "b--p0-customer-sdk-hardcoded"
+      description: "Customer SDK hardcoded ws://localhost"
+      module: "channels-web"
+      priority: P0
+      gap_type: outdated
+      existing_code: []
+      missing_parts:
+        - "SDK reads ws endpoint from config"
+        - "Tenant token injection"
+      estimated_effort: medium
+      depends_on_gaps: []
+
+    # P1 items
+    - id: GAP-004
+      source_id: "A-④"
+      source_file: "clear-gap.md"
+      source_anchor: "a--p1-sandbox-uses-real-api"
+      description: "Sandbox rehearsal uses real API"
+      module: "autoservice"
+      priority: P1
+      gap_type: partial
+      existing_code: []
+      missing_parts:
+        - "Mock response mode for sandbox"
+      estimated_effort: medium
+      depends_on_gaps: []
+
+    - id: GAP-005
+      source_id: "C-⑬"
+      source_file: "clear-gap.md"
+      source_anchor: "c--p1-replay-job-no-dedup"
+      description: "Replay job no dedup"
+      module: "autoservice"
+      priority: P1
+      gap_type: missing
+      existing_code: []
+      missing_parts:
+        - "Deduplication logic for replay job"
+      estimated_effort: small
+      depends_on_gaps: []
+
+    # P2 items
+    - id: GAP-006
+      source_id: "C-⑮"
+      source_file: "clear-gap.md"
+      source_anchor: "c--p2-morning-push-no-rich-text"
+      description: "Morning push no rich text"
+      module: "channels-feishu"
+      priority: P2
+      gap_type: partial
+      existing_code: []
+      missing_parts:
+        - "Feishu interactive card format for morning push"
+      estimated_effort: small
+      depends_on_gaps: []
