@@ -19,8 +19,9 @@ Convert gap analysis results into a structured task list with dependency graph, 
 
 ## Input
 
-- **Required**: `docs/plans/*-gap-analysis.yaml` (output from skill-2)
-- **Required**: `docs/plans/*-prd-structure.yaml` (output from skill-1)
+- **Required**: `docs/plans/*-gap-analysis.yaml` (output from skill-2 or skill-0)
+- **Required**: `docs/plans/*-prd-structure.yaml` (output from skill-1 or skill-0)
+- **Optional**: `docs/plans/*-task-hints.yaml` (output from skill-0 only — see §Step 2.5)
 - **Optional**: `docs/plans/project.yaml` (team configuration)
 - **Optional**: Existing `docs/plans/tasks.yaml` (for incremental updates)
 
@@ -29,8 +30,9 @@ Convert gap analysis results into a structured task list with dependency graph, 
 ### Step 1: Load Gap Analysis
 
 1. Find the most recent `gap-analysis.yaml` and `prd-structure.yaml`
-2. Group gaps by module
-3. Sort by estimated effort and dependency chain
+2. Also check for the most recent `task-hints.yaml` — if found, load it (see §Step 2.5)
+3. Group gaps by module
+4. Sort by estimated effort and dependency chain
 
 ### Step 2: Generate Tasks
 
@@ -74,6 +76,37 @@ tasks:
     owner: null
     artifacts: []
 ```
+
+### Step 2.5: Apply task-hints (only when task-hints.yaml is present)
+
+**Gate**: Skip this entire step if no `task-hints.yaml` was found in Step 1. When absent, task generation is byte-identical to before this change was made.
+
+When `task-hints.yaml` is present, apply three behaviors that override the defaults in Step 2:
+
+#### Behavior 1 — Deliverables come from file_changes
+
+Instead of inferring deliverable paths from gap descriptions:
+
+1. For each `task_hints.file_changes` entry, create a deliverable.
+2. Group `file_changes` by their `related_gap_refs[0]` (primary gap ref). All `file_changes` sharing the same primary gap → one task with multiple deliverables.
+3. If a `file_change` has additional `related_gap_refs` beyond the first, store those as `cross_references` on the task (do not create duplicate deliverables).
+4. `file_changes` with empty `related_gap_refs` → assign to a shared catch-all task; emit warning "orphan file_change assigned to shared task".
+
+#### Behavior 2 — depends_on comes from implementation_steps
+
+Instead of (or in addition to) dependency inference in Step 3:
+
+1. For each `task_hints.implementation_steps` entry:
+   - Identify which task(s) own the files listed in `touches_files` (matched via deliverables from Behavior 1).
+   - For each `step.depends_on_steps` reference → find the tasks that own those step's files → add those tasks to `depends_on`.
+2. Cross-step dependencies take precedence over implicit inference; explicit gap `depends_on_gaps` still applies.
+
+#### Behavior 3 — non_goals is a hard boundary
+
+Before emitting any task, check each `task.deliverables[*].path` against `task_hints.non_goals`:
+1. Tokenize each non_goal string (split on spaces; strip punctuation).
+2. If any token appears in the deliverable path → reject the task; emit warning: `"task excluded per non_goal: '{non_goal}' matches '{path}'"`
+3. Rejected tasks are not written to `tasks.yaml`; they are listed at the bottom of the summary.
 
 ### Step 3: Dependency Analysis
 
