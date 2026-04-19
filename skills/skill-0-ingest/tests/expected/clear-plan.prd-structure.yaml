@@ -1,0 +1,58 @@
+# Expected output for tests/fixtures/role-detection/clear-plan.md
+
+prd_structure:
+  source_type: "ingested"
+  source_files:
+    - "tests/fixtures/role-detection/clear-plan.md"
+  source_role: "plan"
+
+  modules:
+    - id: MOD-01
+      name: "M0 — Contracts & Skeleton"
+      description: "Contracts and skeleton work"
+      prd_sections: []
+      sub_modules:
+        - id: MOD-01a
+          name: "Define conversation engine contract"
+          description: "P0 priority item"
+        - id: MOD-01b
+          name: "Define gateway contract"
+          description: "P0 priority item"
+        - id: MOD-01c
+          name: "Create skeleton files"
+          description: "P0 priority item"
+
+    - id: MOD-02
+      name: "M1 — Core Features"
+      description: "Core conversation features"
+      prd_sections: []
+      sub_modules:
+        - id: MOD-02a
+          name: "Implement conversation modes"
+          description: "P1 priority item"
+        - id: MOD-02b
+          name: "Implement gate transitions"
+          description: "P1 priority item"
+        - id: MOD-02c
+          name: "Implement copilot mode"
+          description: "P1 priority item"
+
+    - id: MOD-03
+      name: "M2 — Admin Portal"
+      description: "Admin portal features"
+      prd_sections: []
+      sub_modules:
+        - id: MOD-03a
+          name: "Build wizard onboarding flow"
+          description: "P2 priority item"
+        - id: MOD-03b
+          name: "Build dashboard KPIs"
+          description: "P2 priority item"
+        - id: MOD-03c
+          name: "Build billing tab"
+          description: "P2 priority item"
+
+  user_stories: []
+  nfrs: []
+  constraints: []
+  external_deps: []

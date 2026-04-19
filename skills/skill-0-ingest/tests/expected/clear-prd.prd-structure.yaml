@@ -1,0 +1,75 @@
+# Expected output for tests/fixtures/role-detection/clear-prd.md
+
+prd_structure:
+  source_type: "ingested"
+  source_files:
+    - "tests/fixtures/role-detection/clear-prd.md"
+  source_role: "prd"
+
+  modules:
+    - id: MOD-01
+      name: "Customer Chat"
+      description: "Website visitor initiates chat and receives AI response"
+      prd_sections: ["§2"]
+      sub_modules: []
+
+    - id: MOD-02
+      name: "Agent Dashboard"
+      description: "Customer service agent reviews and manages active conversations"
+      prd_sections: ["§2"]
+      sub_modules: []
+
+  user_stories:
+    - id: US-001
+      module: MOD-01
+      persona: "website visitor"
+      action: "open a chat widget and send a message"
+      goal: "get help without calling support"
+      acceptance_criteria:
+        - "AC-001: Widget loads within 500ms"
+        - "AC-002: First message receives a response within 3 seconds"
+      prd_ref: "§2"
+
+    - id: US-002
+      module: MOD-02
+      persona: "customer service agent"
+      action: "see all active conversations in a single dashboard"
+      goal: "prioritize and respond efficiently"
+      acceptance_criteria: []
+      prd_ref: "§2"
+
+  nfrs:
+    - id: NFR-01
+      category: performance
+      requirement: "API response time < 200ms at p95"
+      metric: "p95 latency"
+      target: "200ms"
+      prd_ref: "§3"
+
+    - id: NFR-02
+      category: reliability
+      requirement: "99.9% uptime during business hours"
+      metric: "uptime"
+      target: "99.9%"
+      prd_ref: "§3"
+
+  constraints:
+    - id: CON-01
+      type: technology
+      description: "Must use Claude API for AI responses"
+      rationale: null
+      prd_ref: "§4"
+
+    - id: CON-02
+      type: integration
+      description: "Must integrate with existing Feishu workspace"
+      rationale: null
+      prd_ref: "§4"
+
+    - id: CON-03
+      type: technology
+      description: "Python 3.12+ backend"
+      rationale: null
+      prd_ref: "§4"
+
+  external_deps: []
