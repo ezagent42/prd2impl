@@ -1,0 +1,86 @@
+# Expected output for tests/fixtures/role-detection/clear-design-spec.md
+# Used to verify spec-extractor correctness.
+
+task_hints:
+  source_files:
+    - "tests/fixtures/role-detection/clear-design-spec.md"
+
+  file_changes:
+    - path: "src/components/shell/AdminShell.tsx"
+      change_type: create
+      purpose: "root layout"
+      source_anchor: "3-file-changes"
+      related_gap_refs: []
+
+    - path: "src/components/shell/AdminTopbar.tsx"
+      change_type: create
+      purpose: "breadcrumb nav"
+      source_anchor: "3-file-changes"
+      related_gap_refs: []
+
+    - path: "src/components/shell/AdminRail.tsx"
+      change_type: create
+      purpose: "vertical nav"
+      source_anchor: "3-file-changes"
+      related_gap_refs: []
+
+    - path: "src/App.tsx"
+      change_type: modify
+      purpose: "wire AdminShell"
+      source_anchor: "3-file-changes"
+      related_gap_refs: []
+
+    - path: "src/index.css"
+      change_type: modify
+      purpose: "grid variables"
+      source_anchor: "3-file-changes"
+      related_gap_refs: []
+
+  implementation_steps:
+    - step: 1
+      description: "Build AdminShell + AdminTopbar + AdminRail + CSS grid"
+      touches_files:
+        - "src/components/shell/AdminShell.tsx"
+        - "src/components/shell/AdminTopbar.tsx"
+        - "src/components/shell/AdminRail.tsx"
+        - "src/index.css"
+      depends_on_steps: []
+      source_anchor: "5-implementation-steps"
+
+    - step: 2
+      description: "Wire App.tsx → AdminShell"
+      touches_files:
+        - "src/App.tsx"
+      depends_on_steps: [1]
+      source_anchor: "5-implementation-steps"
+
+    - step: 3
+      description: "Adapt existing tab components to canvas slot"
+      touches_files: []
+      depends_on_steps: [2]
+      source_anchor: "5-implementation-steps"
+
+    - step: 4
+      description: "Write unit tests for shell"
+      touches_files: []
+      depends_on_steps: [1]
+      source_anchor: "5-implementation-steps"
+
+  test_strategy:
+    preserved_testids:
+      - "tab-wizard"
+      - "tab-dashboard"
+      - "tab-billing"
+    new_tests:
+      - name: "AdminShell.test.tsx"
+        focuses_on: null
+      - name: "AdminRail.test.tsx"
+        focuses_on: null
+    e2e_delta: "no new E2E — existing E2E selectors preserved via data-testid"
+
+  non_goals:
+    - "no design-system changes (tokens.css unchanged)"
+    - "no mobile-specific UX"
+    - "no real ⌘K search"
+
+  risks: []
