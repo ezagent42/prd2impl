@@ -1,0 +1,120 @@
+# task-hints.yaml — JSON-Schema-flavored YAML schema
+# Produced by skill-0-ingest spec-extractor; consumed by skill-3-task-gen.
+# All top-level fields optional except source_files.
+#
+# skill-3 reads this only when the file exists (backward-compat gate).
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: "task-hints"
+description: >
+  Human-authored design decisions extracted from design-spec and plan MDs.
+  Preserves file-change granularity, implementation ordering, non-goals,
+  and risks so skill-3 generates tasks that match human intent.
+
+type: object
+required: [task_hints]
+properties:
+  task_hints:
+    type: object
+    required: [source_files]
+    properties:
+
+      source_files:
+        type: array
+        description: "Paths to the MD files this was extracted from."
+        items: {type: string}
+        minItems: 1
+
+      file_changes:
+        type: array
+        description: >
+          One entry per file the spec says will change.
+          skill-3 maps each entry to a task.deliverable.
+        items:
+          type: object
+          required: [path, change_type]
+          properties:
+            path:
+              type: string
+              description: "Relative path from repo root."
+            change_type:
+              type: string
+              enum: [create, modify, delete, no-change]
+            purpose:
+              type: string
+              description: "One-line description of what changes and why."
+            source_anchor:
+              type: string
+              description: "Heading slug in the source MD where this was declared."
+            related_gap_refs:
+              type: array
+              description: >
+                GAP-NNN IDs this file change addresses.
+                First entry is primary; rest become cross_references on the task.
+                Populated by cross-validator backfill when initially empty.
+              items: {type: string}
+              default: []
+
+      implementation_steps:
+        type: array
+        description: >
+          Ordered steps from spec §implementation-order.
+          skill-3 uses these to derive depends_on between tasks.
+        items:
+          type: object
+          required: [step, description]
+          properties:
+            step:
+              type: integer
+              description: "1-based step number."
+            description:
+              type: string
+            touches_files:
+              type: array
+              description: "Subset of file_changes.path this step involves."
+              items: {type: string}
+              default: []
+            depends_on_steps:
+              type: array
+              description: "Step numbers this step must follow."
+              items: {type: integer}
+              default: []
+            source_anchor:
+              type: string
+
+      test_strategy:
+        type: object
+        description: "Testing guidance extracted from spec §testing."
+        properties:
+          preserved_testids:
+            type: array
+            description: "data-testid values that must not break."
+            items: {type: string}
+          new_tests:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                name: {type: string}
+                focuses_on: {type: string}
+          e2e_delta:
+            type: string
+            description: "One-liner on E2E impact (e.g. 'no new E2E')."
+
+      non_goals:
+        type: array
+        description: >
+          Hard boundaries from spec §non-goals.
+          skill-3 rejects any task whose deliverables match these keywords.
+        items: {type: string}
+
+      risks:
+        type: array
+        description: "Open risks from spec §risks; flow into task.blocked_by or warnings."
+        items:
+          type: object
+          required: [risk]
+          properties:
+            risk: {type: string}
+            mitigation: {type: string}

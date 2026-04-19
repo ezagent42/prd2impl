@@ -1,0 +1,110 @@
+# task-hints.example.yaml — example output from spec-extractor
+# Based on AutoService admin-portal-web-layout-design.md
+
+task_hints:
+  source_files:
+    - "docs/superpowers/specs/2026-04-18-admin-portal-web-layout-design.md"
+
+  file_changes:
+    - path: "frontend/apps/admin-portal/src/components/shell/AdminShell.tsx"
+      change_type: create
+      purpose: "topbar + rail + canvas shell"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-017"]
+
+    - path: "frontend/apps/admin-portal/src/components/shell/AdminTopbar.tsx"
+      change_type: create
+      purpose: "breadcrumb nav and search bar"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-017"]
+
+    - path: "frontend/apps/admin-portal/src/components/shell/AdminRail.tsx"
+      change_type: create
+      purpose: "vertical nav rail with 5 icon tabs"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-017"]
+
+    - path: "frontend/apps/admin-portal/src/index.css"
+      change_type: modify
+      purpose: "layout grid variables for shell"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-017"]
+
+    - path: "frontend/apps/admin-portal/src/App.tsx"
+      change_type: modify
+      purpose: "wire AdminShell as root layout"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-017"]
+
+    - path: "frontend/apps/admin-portal/src/components/BillingTab.tsx"
+      change_type: modify
+      purpose: "adapt to canvas layout"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-018"]
+
+    - path: "frontend/apps/admin-portal/src/components/DashboardTab.tsx"
+      change_type: modify
+      purpose: "adapt to canvas layout"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-018"]
+
+    - path: "frontend/apps/admin-portal/src/components/shell/AdminShell.test.tsx"
+      change_type: create
+      purpose: "unit tests for shell layout"
+      source_anchor: "6-file-changes"
+      related_gap_refs: ["GAP-017"]
+
+  implementation_steps:
+    - step: 1
+      description: "Build shell: AdminShell + AdminTopbar + AdminRail + CSS grid"
+      touches_files:
+        - "frontend/apps/admin-portal/src/components/shell/AdminShell.tsx"
+        - "frontend/apps/admin-portal/src/components/shell/AdminTopbar.tsx"
+        - "frontend/apps/admin-portal/src/components/shell/AdminRail.tsx"
+        - "frontend/apps/admin-portal/src/index.css"
+      source_anchor: "9-implementation-order"
+
+    - step: 2
+      description: "Wire App.tsx to use AdminShell as root layout"
+      depends_on_steps: [1]
+      touches_files:
+        - "frontend/apps/admin-portal/src/App.tsx"
+      source_anchor: "9-implementation-order"
+
+    - step: 3
+      description: "Adapt BillingTab and DashboardTab to canvas layout"
+      depends_on_steps: [2]
+      touches_files:
+        - "frontend/apps/admin-portal/src/components/BillingTab.tsx"
+        - "frontend/apps/admin-portal/src/components/DashboardTab.tsx"
+      source_anchor: "9-implementation-order"
+
+    - step: 4
+      description: "Write AdminShell unit tests"
+      depends_on_steps: [1]
+      touches_files:
+        - "frontend/apps/admin-portal/src/components/shell/AdminShell.test.tsx"
+      source_anchor: "9-implementation-order"
+
+  test_strategy:
+    preserved_testids:
+      - "tab-wizard"
+      - "tab-dashboard"
+      - "tab-billing"
+    new_tests:
+      - name: "AdminShell.test.tsx"
+        focuses_on: "shell renders topbar + rail + canvas slot"
+      - name: "AdminRail.test.tsx"
+        focuses_on: "default active = notifications; 5 icons switch tabs"
+    e2e_delta: "no new E2E — existing E2E selectors preserved via data-testid"
+
+  non_goals:
+    - "no design-system level changes (tokens.css / components.css unchanged)"
+    - "no mobile-specific UX"
+    - "no ⌘K real search (placeholder only)"
+
+  risks:
+    - risk: "test selector regression if data-testid attributes drift"
+      mitigation: "baseline full test run before refactor; check preserved_testids list"
+    - risk: "CSS grid conflicts with existing tab styles"
+      mitigation: "scope grid variables to admin-shell class only"

@@ -1,0 +1,119 @@
+# gap-analysis.example.yaml — example output from gap-extractor
+# Shows extended fields (source_type, source_files, source_id, source_file, source_anchor)
+# added on top of the existing skill-2 format.
+
+gap_analysis:
+  scan_date: "2026-04-19"
+  source_type: "ingested"           # "scanned" = skill-2 output; "ingested" = skill-0 output
+  source_files:
+    - "docs/plans/2026-04-18-prd-full-journey-gap.md"
+
+  summary:
+    total_gaps: 17
+    by_priority:
+      P0: 6
+      P1: 6
+      P2: 5
+    by_gap_type:
+      missing: 12
+      partial: 4
+      outdated: 1
+
+  gaps:
+    # --- Act A gaps ---
+    - id: GAP-001
+      source_id: "A-①"
+      source_file: "2026-04-18-prd-full-journey-gap.md"
+      source_anchor: "a--p0-a-missing-register-step"
+      description: "缺'注册接入'独立步骤 — 用户首次进入时缺少注册引导，直接进入上传/配置"
+      module: "admin-portal-wizard"
+      priority: P0
+      gap_type: missing
+      existing_code: []
+      missing_parts:
+        - "Wizard 前置 RegisterStep 组件"
+        - "countries → compliance_profile 映射"
+        - "注册表单 → profile YAML 写入逻辑"
+      estimated_effort: medium
+      depends_on_gaps: []
+
+    - id: GAP-002
+      source_id: "A-②"
+      source_file: "2026-04-18-prd-full-journey-gap.md"
+      source_anchor: "a--p0-a-im-management-group-missing"
+      description: "IM 管理群缺失 — 接入流程无法向 Feishu 管理群推送通知"
+      module: "admin-portal-wizard"
+      priority: P0
+      gap_type: missing
+      existing_code: []
+      missing_parts:
+        - "管理 Feishu 群 ID 配置字段"
+        - "接入成功后向管理群推送通知的逻辑"
+      estimated_effort: small
+      depends_on_gaps: []
+
+    - id: GAP-003
+      source_id: "A-③"
+      source_file: "2026-04-18-prd-full-journey-gap.md"
+      source_anchor: "a--p0-a-publish-api-not-implemented"
+      description: "一键发布 API 未实现 — 无法将 sandbox 状态切换为 public"
+      module: "admin-portal-wizard"
+      priority: P0
+      gap_type: missing
+      existing_code: []
+      missing_parts:
+        - "POST /admin/publish endpoint"
+        - "sandbox → public 状态机转换"
+      estimated_effort: medium
+      depends_on_gaps: []
+
+    # --- Act B gaps ---
+    - id: GAP-007
+      source_id: "B-⑦"
+      source_file: "2026-04-18-prd-full-journey-gap.md"
+      source_anchor: "b--p0-b-customer-sdk-single-tenant"
+      description: "客户浮窗 SDK 硬编码 ws://localhost — 无法多租户部署"
+      module: "channels-web"
+      priority: P0
+      gap_type: outdated
+      existing_code:
+        - "channels/web/static/chat.js:23"
+      missing_parts:
+        - "SDK 从配置读取 ws endpoint"
+        - "租户 token 注入机制"
+      estimated_effort: medium
+      depends_on_gaps: []
+
+    # --- Act C gaps ---
+    - id: GAP-012
+      source_id: "C-⑫"
+      source_file: "2026-04-18-prd-full-journey-gap.md"
+      source_anchor: "c--p0-c-dream-engine-no-im-surface"
+      description: "Dream Engine 规则配置无 IM 通道界面"
+      module: "admin-portal-dream"
+      priority: P0
+      gap_type: missing
+      existing_code: []
+      missing_parts:
+        - "Dream Engine 配置页 IM 发布频道字段"
+        - "规则 → IM 群推送绑定逻辑"
+      estimated_effort: medium
+      depends_on_gaps: []
+
+    - id: GAP-014
+      source_id: "C-⑭"
+      source_file: "2026-04-18-prd-full-journey-gap.md"
+      source_anchor: "c--p0-c-morning-push-not-sending"
+      description: "晨报推送未实际发送到群 — 定时任务仅写 DB 不推 Feishu"
+      module: "channels-feishu"
+      priority: P0
+      gap_type: partial
+      existing_code:
+        - "autoservice/scheduler.py"
+      missing_parts:
+        - "定时任务末尾调用 Feishu send_message"
+        - "晨报模板 Feishu 富文本格式化"
+      estimated_effort: small
+      depends_on_gaps: []
+
+    # ... (remaining 11 gaps omitted for brevity in this example)
