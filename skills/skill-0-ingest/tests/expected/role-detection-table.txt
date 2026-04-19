@@ -1,0 +1,53 @@
+# Expected role-detection output for fixture set
+# Format: path | expected_role | min_confidence | method
+
+tests/fixtures/role-detection/clear-gap.md          | gap          | 70 | heuristic
+tests/fixtures/role-detection/clear-design-spec.md   | design-spec  | 70 | heuristic
+tests/fixtures/role-detection/clear-plan.md          | plan         | 70 | heuristic
+tests/fixtures/role-detection/clear-prd.md           | prd          | 70 | heuristic
+tests/fixtures/role-detection/clear-user-stories.md  | user-stories | 70 | heuristic
+tests/fixtures/role-detection/medium-ambiguous.md    | design-spec  | 40 | llm
+
+# Score breakdown for clear-gap.md:
+#   signal1 (filename *-gap.md):          30
+#   signal2 (no frontmatter type):         0
+#   signal3 (H1 "Gap Analysis"):          30
+#   signal4 (P0/P1/P2 tags present):      15+5=20
+#   total:                                 80  ✓ HIGH
+
+# Score breakdown for clear-design-spec.md:
+#   signal1 (filename *-design-spec.md):  30
+#   signal2 (no frontmatter type):         0
+#   signal3 (H1 "Design Spec"):           30
+#   signal4 ("File Changes" +10, "Implementation Steps" +10): 20
+#   total:                                 80  ✓ HIGH
+
+# Score breakdown for clear-plan.md:
+#   signal1 (filename *-plan.md):         30
+#   signal2 (no frontmatter type):         0
+#   signal3 (H1 "Plan"):                  30
+#   signal4 (M0/M1/M2 milestone table):   10
+#   total:                                 70  ✓ HIGH (boundary)
+
+# Score breakdown for clear-prd.md:
+#   signal1 (filename *-prd.md):          30
+#   signal2 (no frontmatter type):         0
+#   signal3 (H1 "PRD"):                   30
+#   signal4 (NFR-001, US-001 present):    10+15=20 capped
+#   total:                                 80  ✓ HIGH
+
+# Score breakdown for clear-user-stories.md:
+#   signal1 (filename *-user-stories.md): 30
+#   signal2 (no frontmatter type):         0
+#   signal3 (H1 "User Stories"):          30
+#   signal4 (US-010/US-011 + "As a"):     15
+#   total:                                 75  ✓ HIGH
+
+# Score breakdown for medium-ambiguous.md:
+#   signal1 (no role keyword in filename): 0
+#   signal2 (no frontmatter type):         0
+#   signal3 (H1 "Admin Portal — Shell Refactor Notes" → no direct role keyword): 0
+#   signal4 ("File Changes" section +10): 10
+#   heuristic total:                       10  → LOW → LLM fallback
+#   LLM: reads doc, identifies design-spec patterns, returns confidence ~55
+#   merged_score: max(10, 55) = 55  → MEDIUM, needs user confirmation
