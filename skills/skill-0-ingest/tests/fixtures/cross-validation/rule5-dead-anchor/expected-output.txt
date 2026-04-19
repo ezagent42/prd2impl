@@ -1,0 +1,3 @@
+FATAL: none
+WARNINGS: 1
+  [WARN] Rule 5: dead anchor: 'this-heading-does-not-exist' in gap.md (heading may have been renamed)

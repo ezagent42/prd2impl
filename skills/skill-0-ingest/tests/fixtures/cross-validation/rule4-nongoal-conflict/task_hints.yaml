@@ -1,0 +1,12 @@
+task_hints:
+  source_files: ["spec.md"]
+  file_changes:
+    - path: "src/tokens.css"           # <-- contains "tokens.css" keyword
+      change_type: modify
+      purpose: "update design tokens"
+      source_anchor: "file-changes"
+      related_gap_refs: ["GAP-001"]
+  implementation_steps: []
+  non_goals:
+    - "no design-system level changes (tokens.css unchanged)"  # <-- mentions "tokens.css"
+  risks: []

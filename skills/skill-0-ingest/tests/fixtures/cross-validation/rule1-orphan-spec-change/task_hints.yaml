@@ -1,0 +1,16 @@
+task_hints:
+  source_files: ["spec.md"]
+  file_changes:
+    - path: "src/AdminShell.tsx"
+      change_type: create
+      purpose: "root layout"
+      source_anchor: "file-changes"
+      related_gap_refs: []           # <-- EMPTY: triggers Rule 1
+    - path: "src/App.tsx"
+      change_type: modify
+      purpose: "wire AdminShell"
+      source_anchor: "file-changes"
+      related_gap_refs: ["GAP-001"]  # <-- has ref: should NOT trigger Rule 1
+  implementation_steps: []
+  non_goals: []
+  risks: []

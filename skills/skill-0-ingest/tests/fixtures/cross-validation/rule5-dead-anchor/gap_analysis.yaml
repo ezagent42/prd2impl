@@ -1,0 +1,19 @@
+gap_analysis:
+  scan_date: "2026-04-19"
+  source_type: "ingested"
+  source_files: ["gap.md"]
+  summary:
+    total_gaps: 1
+    by_priority: {P0: 1}
+  gaps:
+    - id: GAP-001
+      source_id: "A-①"
+      source_file: "gap.md"
+      source_anchor: "this-heading-does-not-exist"   # <-- dead anchor, triggers Rule 5
+      description: "Missing register step"
+      priority: P0
+      gap_type: missing
+      existing_code: []
+      missing_parts: []
+      estimated_effort: medium
+      depends_on_gaps: []

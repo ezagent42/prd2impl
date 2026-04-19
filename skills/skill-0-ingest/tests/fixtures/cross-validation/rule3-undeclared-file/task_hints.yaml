@@ -1,0 +1,18 @@
+task_hints:
+  source_files: ["spec.md"]
+  file_changes:
+    - path: "src/AdminShell.tsx"
+      change_type: create
+      purpose: "root layout"
+      source_anchor: "file-changes"
+      related_gap_refs: ["GAP-001"]
+  implementation_steps:
+    - step: 1
+      description: "Build shell and configure routes"
+      touches_files:
+        - "src/AdminShell.tsx"   # declared in file_changes ✓
+        - "src/routes.tsx"        # NOT in file_changes → triggers Rule 3
+      depends_on_steps: []
+      source_anchor: "implementation-steps"
+  non_goals: []
+  risks: []

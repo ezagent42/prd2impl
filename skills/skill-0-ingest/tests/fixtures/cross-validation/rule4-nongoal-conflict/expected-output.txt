@@ -1,0 +1,6 @@
+FATAL: 1
+  [FATAL] Rule 4: non_goal conflicts with file_change
+    non_goal  : "no design-system level changes (tokens.css unchanged)"
+    file_change: src/tokens.css (modify)
+    → Fix the spec MD and re-run /ingest-docs
+WARNINGS: 0

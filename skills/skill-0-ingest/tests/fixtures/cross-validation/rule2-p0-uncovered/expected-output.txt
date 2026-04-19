@@ -1,0 +1,3 @@
+FATAL: none
+WARNINGS: 1
+  [WARN] Rule 2: P0 gap with no implementation plan: GAP-002 (IM group missing)

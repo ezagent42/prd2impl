@@ -1,0 +1,11 @@
+task_hints:
+  source_files: ["spec.md"]
+  file_changes:
+    - path: "src/RegisterStep.tsx"
+      change_type: create
+      purpose: "register step component"
+      source_anchor: "file-changes"
+      related_gap_refs: ["GAP-001"]  # covers GAP-001; GAP-002 is NOT covered
+  implementation_steps: []
+  non_goals: []
+  risks: []
