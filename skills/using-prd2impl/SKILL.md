@@ -14,7 +14,12 @@ This plugin provides a complete pipeline from PRD (Product Requirements Document
 ## Pipeline Overview
 
 ```
-Phase 1: Upstream Analysis (PRD → Tasks)
+Phase 0: Document Ingestion (Entry B — alternative to Entry A)
+  skill-0  /ingest-docs     — Ingest human-authored MDs (gaps, specs, plans)
+                               produces: prd-structure.yaml + gap-analysis.yaml + task-hints.yaml
+                               use instead of /prd-analyze when you already have hand-written docs
+
+Phase 1: Upstream Analysis (PRD → Tasks)  [Entry A — start here if you have a raw PRD]
   skill-1  /prd-analyze     — Structured PRD extraction
   skill-2  /gap-scan        — Codebase vs PRD gap analysis
   skill-3  /task-gen        — Task generation with dependencies
@@ -42,6 +47,7 @@ Match the user's intent to the correct skill:
 
 | User Intent | Skill |
 |-------------|-------|
+| "Ingest my docs", "import gap analysis", "read my markdown files", `/ingest-docs` | skill-0-ingest |
 | "Analyze this PRD", "parse requirements", "read the PRD" | skill-1-prd-analyze |
 | "What gaps exist", "what's missing", "scan codebase" | skill-2-gap-scan |
 | "Generate tasks", "break down into tasks", "create task list" | skill-3-task-gen |
@@ -59,12 +65,32 @@ Match the user's intent to the correct skill:
 
 ## Quick Start
 
-For a **new project** starting from a PRD:
+### Entry A — Starting from a raw PRD document
+
 ```
 /prd-analyze docs/prd/my-prd.md    → Structured requirements
 /gap-scan                           → What exists vs what's needed
 /task-gen                           → Task breakdown with dependencies
 /plan-schedule                      → Batches, milestones, timeline
+```
+
+### Entry B — Starting from existing human-authored Markdown files
+
+Use this when you already have hand-written gap analyses, design specs, or plans.
+Entry A and Entry B are **mutually exclusive per project** — run one or the other.
+
+```
+/ingest-docs docs/plans/my-gap.md docs/superpowers/specs/my-design.md
+                                    → Produces prd-structure.yaml
+                                       + gap-analysis.yaml
+                                       + task-hints.yaml
+/task-gen                           → Task breakdown (uses task-hints.yaml automatically)
+/plan-schedule                      → Batches, milestones, timeline
+```
+
+Optional `--tag` to force a role when auto-detection is uncertain:
+```
+/ingest-docs a.md b.md c.md --tag spec=a.md --tag gap=b.md
 ```
 
 For **daily execution** (after planning is done):
@@ -97,14 +123,18 @@ claude --dangerously-skip-permissions    # truly hands-off (no tool prompts)
 
 This plugin uses **YAML as source of truth** with markdown views:
 
-| File | Purpose | Format |
-|------|---------|--------|
-| `docs/plans/project.yaml` | Project config (team, milestones) | YAML |
-| `docs/plans/prd-structure.yaml` | Structured PRD extraction | YAML |
-| `docs/plans/gap-analysis.yaml` | Gap scan results | YAML |
-| `docs/plans/tasks.yaml` | Task definitions + dependencies | YAML |
-| `docs/plans/execution-plan.yaml` | Batch schedule + timeline | YAML |
-| `docs/plans/task-status.md` | Human-readable progress view | Markdown (auto-generated from tasks.yaml) |
+| File | Purpose | Format | Source |
+|------|---------|--------|--------|
+| `docs/plans/project.yaml` | Project config (team, milestones) | YAML | manual |
+| `docs/plans/*-prd-structure.yaml` | Structured PRD extraction | YAML | skill-1 or skill-0 |
+| `docs/plans/*-gap-analysis.yaml` | Gap scan results | YAML | skill-2 or skill-0 |
+| `docs/plans/*-task-hints.yaml` | Human design decisions (file_changes, steps, non_goals) | YAML | skill-0 only |
+| `docs/plans/tasks.yaml` | Task definitions + dependencies | YAML | skill-3 |
+| `docs/plans/execution-plan.yaml` | Batch schedule + timeline | YAML | skill-4 |
+| `docs/plans/task-status.md` | Human-readable progress view | Markdown | auto-generated |
+
+Files from skill-0 carry `source_type: "ingested"` to distinguish them from skill-1/2 outputs.
+skill-3 reads `task-hints.yaml` automatically if present; behavior is backward-compatible when absent.
 
 If YAML files don't exist yet, skills will fall back to reading existing markdown files (backward compatible with hand-written task-status.md).
 
