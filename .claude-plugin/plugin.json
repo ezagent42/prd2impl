@@ -1,7 +1,7 @@
 {
   "name": "prd2impl",
-  "description": "PRD-to-Implementation pipeline: 12-skill workflow from requirement analysis to task execution, progress tracking, and milestone verification",
-  "version": "0.1.0",
+  "description": "PRD-to-Implementation pipeline: 14-skill workflow from requirement analysis to task execution, progress tracking, and milestone verification. Per-scope plans_dir isolation for parallel milestones.",
+  "version": "0.2.0",
   "author": {
     "name": "h2os.cloud"
   },
