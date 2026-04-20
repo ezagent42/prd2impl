@@ -1,12 +1,22 @@
 # prd2impl
 
-PRD-to-Implementation pipeline for Claude Code. A 13-skill plugin that takes you from a Product Requirements Document (or existing hand-written docs) through gap analysis, task generation, execution planning, and all the way to milestone verification.
+PRD-to-Implementation pipeline for Claude Code. A 14-skill plugin that takes you from a Product Requirements Document (or existing hand-written docs) through gap analysis, task generation, execution planning, parallel batch dispatch, full-autopilot execution, and all the way to milestone verification.
 
 ## Installation
 
-### Via Claude Code settings
+### Via marketplace (recommended)
 
-Add to your project's `.claude/settings.json`:
+```bash
+# 1. Add the ezagent42 marketplace (one-time)
+/plugin marketplace add ezagent42/ezagent42
+
+# 2. Install prd2impl
+/plugin install prd2impl@ezagent42
+```
+
+### Via Claude Code settings (manual)
+
+If you've cloned this repo locally, add to your project's `.claude/settings.json`:
 
 ```json
 {
@@ -16,14 +26,13 @@ Add to your project's `.claude/settings.json`:
 }
 ```
 
-Or if published to a marketplace:
+### Companion plugins
 
-```json
-{
-  "enabledPlugins": {
-    "prd2impl@your-marketplace": true
-  }
-}
+prd2impl delegates testing and methodology to two optional companions (both available on the same marketplace). Install them for the full pipeline; without them, prd2impl degrades gracefully to simpler paths.
+
+```bash
+/plugin install dev-loop-skills@ezagent42   # test pipeline (eval / plan / code / run / registry)
+/plugin install superpowers                 # brainstorming, TDD, debugging, code review
 ```
 
 ### Verify installation
@@ -44,6 +53,7 @@ prd2impl:task-status        — Progress dashboard
 prd2impl:smoke-test         — Milestone gate verification
 prd2impl:retro              — Milestone retrospective
 prd2impl:contract-check     — Contract drift detection
+prd2impl:autorun            — Full-autopilot orchestrator
 ```
 
 ## Quick Start
