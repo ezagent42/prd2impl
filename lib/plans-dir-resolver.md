@@ -10,7 +10,7 @@ paths.
 resolve_plans_dir():
   1. if CLI flag --plans-dir <path> was passed:         return <path>
   2. elif project.yaml has `plans_dir` field (non-empty): return project.yaml.plans_dir
-  3. else:                                               return "docs/plans/"
+  3. else:                                               return "docs/plans"
 ```
 
 After resolution, if the resolved directory does not exist, `mkdir -p` it
@@ -18,8 +18,10 @@ silently (no error, no prompt).
 
 ## Legality Checks
 
-Run these checks on the resolved path in order; reject with error message if
-any fails:
+Normalize runs on every resolved value (including the default) before paths
+are constructed, so downstream path concatenation `{plans_dir}/{name}` never
+produces a double slash. Then run the following checks in order; reject with
+error message if any fails:
 
 1. **Normalize**: strip trailing `/`, resolve `./`, convert `\` → `/` (Windows)
 2. **Absolute path check**: if starts with `/` or matches `[A-Za-z]:` →
@@ -44,7 +46,7 @@ time.
 |-------|----------|
 | CLI `--plans-dir docs/plans/m2`, no project.yaml | `docs/plans/m2` |
 | No CLI, `project.yaml.plans_dir: docs/plans/m2` | `docs/plans/m2` |
-| No CLI, no project.yaml.plans_dir | `docs/plans/` |
+| No CLI, no project.yaml.plans_dir | `docs/plans` |
 | CLI `--plans-dir /tmp/plans` | ERROR (absolute path) |
 | CLI `--plans-dir ../plans` | ERROR (`..` segment) |
 | CLI `--plans-dir "docs/plans/m2/"` | `docs/plans/m2` (trailing slash stripped) |

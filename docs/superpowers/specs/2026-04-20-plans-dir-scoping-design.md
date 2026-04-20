@@ -140,10 +140,11 @@ resolve_plans_dir():
 1. **Normalize**：去尾部 `/`、解析 `./`、展开分隔符到 POSIX 形式（Windows 下 `\` → `/`）
 2. **绝对路径检查**：若以 `/` 开头或匹配 `[A-Za-z]:`（Windows drive）→ 报错
 3. **`..` 检查**：normalize 后的路径 split by `/`，若任一段为 `..` → 报错
-4. **空字符串**：直接返回默认 `docs/plans/`，不报错
+4. **空字符串**：直接返回默认 `docs/plans`（normalize 后无尾部 `/`），不报错
 
-错误信息统一为：
-`"ERROR: plans_dir must be a repository-relative path without '..' segments. Got: '<input>'"`
+错误信息（每种非法情形独立一条，见 `lib/plans-dir-resolver.md` 为权威版本）：
+- 绝对路径：`"plans_dir must be a repository-relative path. Got: '<input>'"`
+- `..` 段：`"plans_dir must not contain '..' segments. Got: '<input>'"`
 
 ## 5. Changes
 

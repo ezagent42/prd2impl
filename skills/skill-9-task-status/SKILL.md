@@ -25,7 +25,7 @@ Display a comprehensive progress dashboard with statistics, visualizations, and 
 
 ## Execution Flow
 
-> **Path resolution**: Before constructing any read/output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references above/below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
+> **Path resolution**: Before constructing any read/output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references above/below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. `.artifacts/` paths are NOT scoped — they remain shared across plans_dir (see design spec §8 Limitation 1).
 
 ### Step 1: Load Data
 
