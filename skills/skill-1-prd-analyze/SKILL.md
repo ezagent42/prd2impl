@@ -24,6 +24,8 @@ Parse a Product Requirements Document (PRD) into structured, machine-queryable Y
 
 ## Execution Flow
 
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
+
 ### Step 1: Read & Understand the PRD
 
 1. Read the entire PRD document
@@ -119,7 +121,7 @@ complexity:
 
 ### Step 5: Output
 
-1. Write structured output to `docs/plans/{date}-prd-structure.yaml`
+1. Write structured output to `{plans_dir}/{date}-prd-structure.yaml`
 2. Generate a human-readable summary (print to terminal):
    - Module count and dependency graph (Mermaid)
    - User story count by module
@@ -135,7 +137,7 @@ Prompt the user:
 > PRD analysis complete. {N} modules, {M} user stories, {K} NFRs extracted.
 > {F} items flagged for clarification (see above).
 >
-> Review `docs/plans/{date}-prd-structure.yaml` and let me know:
+> Review `{plans_dir}/{date}-prd-structure.yaml` and let me know:
 > 1. Any modules missing or incorrectly scoped?
 > 2. Any user stories that should be split or merged?
 > 3. Answers to flagged clarification questions?
