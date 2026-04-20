@@ -19,8 +19,8 @@ Organize tasks into time-boxed batches with parallel assignment, milestone gates
 
 ## Input
 
-- **Required**: `docs/plans/*-tasks.yaml` (output from skill-3)
-- **Optional**: `docs/plans/project.yaml` (team config, target dates)
+- **Required**: `{plans_dir}/*-tasks.yaml` (output from skill-3)
+- **Optional**: `docs/plans/project.yaml` (team config, target dates; always at project root)
 - **Optional**: User-specified constraints (deadline, team size, work hours)
 
 ## Execution Flow
