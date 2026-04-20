@@ -21,11 +21,13 @@ Launch multiple tasks in parallel using Claude Code's Agent tool. Verify all pre
 
 - **Required**: Batch ID or comma-separated task IDs
 - **Data sources**:
-  1. `docs/plans/*-execution-plan.yaml` (for batch definitions)
-  2. `docs/plans/tasks.yaml` (for task details)
-  3. `docs/plans/task-status.md` (for current status)
+  1. `{plans_dir}/*-execution-plan.yaml` (for batch definitions)
+  2. `{plans_dir}/tasks.yaml` (for task details)
+  3. `{plans_dir}/task-status.md` (for current status)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any read/write path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. Bare references to `tasks.yaml`, `task-status.md`, etc. are also `{plans_dir}`-scoped.
 
 ### Step 1: Resolve Tasks
 
@@ -102,7 +104,7 @@ For each task, collect its **predicted file set** from 3 sources:
 | **Import dependents** | Grep codebase for `from {module} import` or `import {module}` to find files that import the deliverable module — these may need updating | Medium |
 
 Also add **known shared files** that every task might touch:
-- `docs/plans/task-status.md` — expected, handled by sequential merge
+- `{plans_dir}/task-status.md` — expected, handled by sequential merge
 - `.artifacts/registry.json` — expected, handled by sequential merge
 
 **Step 2 — Detect overlaps:**

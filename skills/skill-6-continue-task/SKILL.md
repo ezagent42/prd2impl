@@ -26,6 +26,8 @@ Resume a task that's already `in_progress`, determine where it left off, and adv
 
 ## Execution Flow
 
+> **Path resolution**: Before constructing any read/write path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. Bare references to `tasks.yaml`, `task-status.md`, etc. are also `{plans_dir}`-scoped.
+
 ### Step 1: Verify Task State
 
 1. Load task from `tasks.yaml` or `task-status.md`

@@ -48,6 +48,8 @@ Continue in interactive mode anyway? (yes/cancel)
 
 ## Execution Flow
 
+> **Path resolution**: Before constructing any read/write path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. Bare references to `tasks.yaml`, `task-status.md`, etc. are also `{plans_dir}`-scoped.
+
 ### Step 1: Build Work Queue
 
 1. Load `tasks.yaml` and `execution-plan.yaml` (if present)
