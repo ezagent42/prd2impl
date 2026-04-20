@@ -1,5 +1,17 @@
 {
   "name": "prd2impl",
   "version": "0.1.0",
-  "type": "module"
+  "type": "module",
+  "peerDependencies": {
+    "superpowers": "^5.0.0",
+    "dev-loop-skills": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "superpowers": {
+      "optional": true
+    },
+    "dev-loop-skills": {
+      "optional": true
+    }
+  }
 }
