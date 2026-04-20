@@ -26,7 +26,7 @@ Convert multiple human-authored Markdown files into the YAML artifacts that `ski
 
 ## Outputs
 
-Three YAML files written to `docs/plans/{date}-*.yaml`:
+Three YAML files written to `{plans_dir}/{date}-*.yaml`:
 
 | File | Produced when | Consumed by |
 |------|--------------|-------------|
@@ -125,17 +125,19 @@ If no warnings (and no fatals): skip checkpoint, proceed automatically.
 
 ## Phase 4 · Write + Summary
 
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All paths below use `{plans_dir}` as the base directory.
+
 ### 4.1 Determine output paths
 
 ```
-docs/plans/{date}-gap-analysis.yaml      (if gap_analysis populated)
-docs/plans/{date}-prd-structure.yaml     (if prd_structure populated)
-docs/plans/{date}-task-hints.yaml        (if task_hints populated)
+{plans_dir}/{date}-gap-analysis.yaml      (if gap_analysis populated)
+{plans_dir}/{date}-prd-structure.yaml     (if prd_structure populated)
+{plans_dir}/{date}-task-hints.yaml        (if task_hints populated)
 ```
 
 Where `{date}` = today's date in `YYYY-MM-DD` format.
 
-If a file already exists with today's date: append `-v2` (then `-v3`, etc.) to avoid overwrite.
+If a file already exists at the target path: print a diff summary line (informational, non-blocking) and overwrite. Example: `"Overwriting {path} (12 modules → 13 modules, 1 constraint removed)"`. After overwrite, print a downstream-invalidation hint: `"Note: tasks.yaml for this plans_dir already exists and may now be inconsistent. Re-run /task-gen to regenerate."`. Users who want to keep both versions should run with a different `--plans-dir`.
 
 ### 4.2 Write files
 
@@ -153,9 +155,9 @@ skill-0-ingest complete
 Input files:  {N} processed, {D} dropped, {U} unknown/skipped
 
 Outputs written:
-  docs/plans/{date}-gap-analysis.yaml      {N_gaps} gaps  (P0={n0}, P1={n1}, P2={n2})
-  docs/plans/{date}-prd-structure.yaml     {N_mods} modules, {N_us} user stories
-  docs/plans/{date}-task-hints.yaml        {N_fc} file_changes, {N_steps} steps
+  {plans_dir}/{date}-gap-analysis.yaml      {N_gaps} gaps  (P0={n0}, P1={n1}, P2={n2})
+  {plans_dir}/{date}-prd-structure.yaml     {N_mods} modules, {N_us} user stories
+  {plans_dir}/{date}-task-hints.yaml        {N_fc} file_changes, {N_steps} steps
 
 Cross-validation:  {W} warnings (see above), 0 fatals
 
@@ -169,9 +171,9 @@ Review the output YAMLs above.
 
 Next step: run /task-gen to generate tasks from these artifacts.
 Pass the gap-analysis and prd-structure paths explicitly if needed:
-  /task-gen docs/plans/{date}-gap-analysis.yaml docs/plans/{date}-prd-structure.yaml
+  /task-gen {plans_dir}/{date}-gap-analysis.yaml {plans_dir}/{date}-prd-structure.yaml
 
-If task-hints.yaml was produced, skill-3 will pick it up automatically from docs/plans/.
+If task-hints.yaml was produced, skill-3 will pick it up automatically from {plans_dir}/.
 
 Ready to run /task-gen? (y/n — or adjust the YAML files first)
 ```
@@ -186,7 +188,7 @@ Ready to run /task-gen? (y/n — or adjust the YAML files first)
 | All files unknown after Phase 1 | `ERROR: all unknown` → abort with `--tag` suggestion |
 | One file fails extraction | Skip file + warning; continue with others |
 | Fatal cross-validation conflict | Abort Phase 4; print conflict pairs |
-| Same-day output file collision | Append `-v2` suffix |
+| Same-day re-run of /ingest-docs | Overwrite with diff-summary log (no suffix; use different --plans-dir for coexistence) |
 
 ## Component library
 
