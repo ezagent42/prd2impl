@@ -138,6 +138,51 @@ skill-3 reads `task-hints.yaml` automatically if present; behavior is backward-c
 
 If YAML files don't exist yet, skills will fall back to reading existing markdown files (backward compatible with hand-written task-status.md).
 
+## Isolating Multiple Scopes with `plans_dir`
+
+When running multiple milestones/projects in parallel on the same repo
+(e.g. finishing M1 while planning M2), set a per-scope `plans_dir` to avoid
+artifact collision.
+
+### Quick setup
+
+```yaml
+# docs/plans/project.yaml
+project:
+  # ... other fields ...
+  plans_dir: docs/plans/m2   # new scope goes here
+```
+
+After this, all prd2impl commands (`/ingest-docs`, `/task-gen`,
+`/task-status`, etc.) read/write under `docs/plans/m2/` instead of the root
+`docs/plans/` directory.
+
+### Ad-hoc override
+
+Pass `--plans-dir <path>` to any command to override the config for that
+invocation:
+
+```bash
+/ingest-docs --plans-dir docs/plans/m2 a.md b.md
+```
+
+Priority: CLI flag > project.yaml > default (`docs/plans/`).
+
+### Migrating an existing project
+
+```bash
+mkdir docs/plans/m1
+mv docs/plans/*.yaml docs/plans/*.md docs/plans/m1/
+# then in project.yaml:
+#   plans_dir: docs/plans/m1
+```
+
+### Limitations
+
+- `plans_dir` must be repo-relative; absolute paths and `..` segments rejected
+- `.artifacts/` directory is shared across all plans_dir (intentional)
+- See `lib/plans-dir-resolver.md` for full spec
+
 ## Integration with Other Skills
 
 prd2impl is an **orchestrator** — it owns project-level planning and task
