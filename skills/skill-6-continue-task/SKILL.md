@@ -89,20 +89,87 @@ Based on detected progress:
 1. Invoke `skill-4-test-runner` (from dev-loop-skills)
 2. Run the full test suite for this task's scope
 3. If all green → proceed to closing
-4. If failures → **diagnose via `superpowers:systematic-debugging` (if available)**,
-   fix, re-run (up to 3 attempts). The debugging skill enforces hypothesis /
-   evidence discipline instead of guess-and-patch cycles. If unavailable,
-   proceed with ad-hoc diagnosis.
-5. If still failing after 3 attempts → use diagnostic template:
+4. If failures → **classify the failure surface first**:
+   - **UI surface with Playwright evidence** (failed test produced
+     `test-failed-*.png` / `video.webm` / `trace.zip` under the e2e-report's
+     `evidence/{test_id}/`) → enter the **UI-regression closed loop**
+     (Step 4a below). Skip the traditional debug retry.
+   - **All other failures** (terminal, API, unit-level): **diagnose via
+     `superpowers:systematic-debugging` (if available)**, fix, re-run (up to
+     3 attempts). The debugging skill enforces hypothesis / evidence
+     discipline instead of guess-and-patch cycles. If unavailable, proceed
+     with ad-hoc diagnosis.
+5. If still failing after 3 attempts (non-UI path) or 2 iterations (UI
+   closed-loop path) → use diagnostic template:
    ```
-   {Task ID} dev-loop failing after 3 attempts.
+   {Task ID} dev-loop failing after {N} attempts.
    Common failure: {pattern}
    Possible causes:
    a) Contract mismatch → run /contract-check
    b) Missing Red decision → mark blocked
    c) Logic bug → {specific location}
    d) Bad test case → revise test-plan
+   e) Visual regression unresolvable → escalate to design review
    ```
+
+#### Step 4a: UI-regression closed loop (new)
+
+Triggers only when a failed test's evidence directory contains Playwright
+artifacts. Purpose: turn a visual failure into a new eval-doc → new test-plan
+→ new test-code cycle automatically, instead of hand-patching the
+implementation and guessing what "looked wrong".
+
+Loop iteration (cap: 2 iterations per task; combined with the 3-attempt
+non-UI debug path this yields a hard cap of 5 total retries before the
+diagnostic template):
+
+1. **Collect inputs** — for each failed UI test:
+   - Path to `test-failed-*.png` (actual viewport on failure)
+   - Path to `video.webm` / `trace.zip` (if present)
+   - pytest traceback
+   - The task's most recent eval-doc (expected behavior / mockup)
+
+2. **Invoke skill-5-feature-eval in verify mode, automated sub-flow**
+   (see dev-loop-skills/skill-5-feature-eval SKILL.md "Verify 模式 → 自动反馈来源"):
+   - Input: the artifacts from step 1
+   - Output: a new eval-doc with `visual_classification` filled
+     (`layout-broken` / `content-mismatch` / `element-missing` /
+     `selector-drift` / `timing-flaky`)
+
+3. **Route by classification**:
+   - `selector-drift` / `timing-flaky` → invoke `skill-3-test-code-writer`
+     directly to adjust test selectors or waits. **Do not change
+     implementation code.** Re-run skill-4.
+   - `layout-broken` / `content-mismatch` / `element-missing` → invoke
+     `skill-2-test-plan-generator` with the new eval-doc to produce an
+     incremental test-plan, then `skill-3-test-code-writer` to extend the
+     test suite, then implementation fix, then skill-4 re-run.
+
+4. **Track iteration chain** — update `.artifacts/registry.json` on the task
+   entry:
+   ```json
+   {
+     "iteration_chain": [
+       "eval-{name}-001",
+       "test-plan-{name}-001",
+       "test-diff-{name}-001",
+       "e2e-report-{name}-001",   // first failure
+       "eval-{name}-002",          // verify-mode auto-iteration
+       "test-plan-{name}-002",     // or test-diff-{name}-002 for selector-drift
+       "e2e-report-{name}-002"     // re-run
+     ]
+   }
+   ```
+   Each iteration **must** add at least one new artifact ID. If a retry
+   produces no new artifact (e.g., AI tweaked impl in place), that retry does
+   not count against the cap — but also means the loop is not making
+   traceable progress; flag it.
+
+5. **Termination**:
+   - Green on re-run → proceed to closing (Step 4 success path)
+   - Still red after iteration 2 → emit the diagnostic template from Step 5
+     above, include `iteration_chain` and the last classification, stop for
+     human review.
 
 #### All green → Close Task
 1. **Independent review (recommended):** invoke
