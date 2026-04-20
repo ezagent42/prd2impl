@@ -121,7 +121,7 @@ claude --dangerously-skip-permissions    # truly hands-off (no tool prompts)
 
 ## Data Files Convention
 
-This plugin uses **YAML as source of truth** with markdown views:
+This plugin uses **YAML as source of truth** with markdown views. Paths below show the default (`docs/plans/`); if `plans_dir` is configured in `project.yaml` or passed via `--plans-dir`, all these files live under that resolved directory instead (except `project.yaml` itself, which always stays at `docs/plans/`):
 
 | File | Purpose | Format | Source |
 |------|---------|--------|--------|

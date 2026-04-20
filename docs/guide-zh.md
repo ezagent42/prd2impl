@@ -219,7 +219,7 @@ prd2impl 把所有任务分成三类，执行路径不同：
 
 ## 6. 文件约定
 
-prd2impl 用 **YAML 作为真相源**，Markdown 只是人类可读视图。所有文件默认落在 `docs/plans/`（可通过 skill 参数改目录）：
+prd2impl 用 **YAML 作为真相源**，Markdown 只是人类可读视图。所有文件默认落在 `docs/plans/`；通过在 `project.yaml` 设置 `plans_dir: docs/plans/<scope>` 或命令加 `--plans-dir <path>` 可以把一个里程碑/迭代的产物隔离到子目录（详见 `lib/plans-dir-resolver.md`）：
 
 | 文件 | 生成者 | 作用 |
 |------|--------|------|
