@@ -171,4 +171,22 @@ Based on the report:
 
 ## Integration with superpowers
 
-If `superpowers:verification-before-completion` is available, invoke it as an additional check layer before declaring GO.
+Before declaring GO, apply the following additional layers when the respective
+skills are available (non-blocking — skip any layer whose skill is unavailable):
+
+1. **Independent review** — invoke `superpowers:requesting-code-review`. This
+   dispatches the `code-reviewer` subagent to audit the milestone's merged
+   changes against the plan and coding standards. Process its feedback via
+   `superpowers:receiving-code-review` (rigorous verification, not blind
+   agreement). Rationale: Green-task closures inside `/continue-task` already
+   run a per-task review; the milestone-level review catches cross-task
+   integration issues that per-task review cannot see.
+2. **Verification discipline** — invoke
+   `superpowers:verification-before-completion` as a final check before
+   declaring GO. It enforces "evidence before assertions" — every ✅ in the
+   gate report must be backed by an observed command output.
+
+All three layers are advisory: if none are available, the gate decision falls
+back to the automated-test / artifact / scenario checks above. If they flag
+**critical** issues, downgrade the gate decision from GO to CONDITIONAL GO
+(or NO-GO) regardless of automated-test results.
