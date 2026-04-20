@@ -2,6 +2,8 @@
 
 PRD-to-Implementation pipeline for Claude Code. A 14-skill plugin that takes you from a Product Requirements Document (or existing hand-written docs) through gap analysis, task generation, execution planning, parallel batch dispatch, full-autopilot execution, and all the way to milestone verification.
 
+> 🇨🇳 **中文用户**: 完整的中文使用手册（含新项目接入 / 多人协同分工 / 典型工作流 / FAQ）见 [docs/guide-zh.md](docs/guide-zh.md)。
+
 ## Installation
 
 ### Via marketplace (recommended)
