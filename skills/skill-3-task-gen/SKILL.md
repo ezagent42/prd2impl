@@ -27,6 +27,8 @@ Convert gap analysis results into a structured task list with dependency graph, 
 
 ## Execution Flow
 
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
+
 ### Step 1: Load Gap Analysis
 
 1. Find the most recent `gap-analysis.yaml` and `prd-structure.yaml`
@@ -192,8 +194,8 @@ warnings:
 
 ### Step 7: Output
 
-1. Write `docs/plans/{date}-tasks.yaml` (structured data)
-2. Write `docs/plans/{date}-tasks.md` (human-readable table format)
+1. Write `{plans_dir}/{date}-tasks.yaml` (structured data)
+2. Write `{plans_dir}/{date}-tasks.md` (human-readable table format)
 3. Write dependency graph as Mermaid in the markdown file
 4. Print summary to terminal
 
@@ -205,7 +207,7 @@ warnings:
 > Type split: {G} Green / {Y} Yellow / {R} Red
 > Critical path: {CP} tasks deep
 >
-> Review `docs/plans/{date}-tasks.yaml` and confirm:
+> Review `{plans_dir}/{date}-tasks.yaml` and confirm:
 > 1. Task granularity — any too large (>8h) or too small (<30min)?
 > 2. Color classification — any Green that should be Yellow/Red?
 > 3. Dependencies — any missing or incorrect links?
