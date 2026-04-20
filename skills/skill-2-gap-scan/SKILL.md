@@ -19,7 +19,7 @@ Automatically scan the existing codebase against PRD requirements to identify im
 
 ## Input
 
-- **Required**: `docs/plans/*-prd-structure.yaml` (output from skill-1)
+- **Required**: `{plans_dir}/*-prd-structure.yaml` (output from skill-1)
 - **Optional**: Existing codebase in the working directory
 
 If `prd-structure.yaml` doesn't exist, prompt the user to run `/prd-analyze` first.
@@ -30,7 +30,7 @@ If `prd-structure.yaml` doesn't exist, prompt the user to run `/prd-analyze` fir
 
 ### Step 1: Load PRD Structure
 
-1. Find the most recent `docs/plans/*-prd-structure.yaml`
+1. Find the most recent `{plans_dir}/*-prd-structure.yaml`
 2. Parse modules, user stories, NFRs, constraints
 3. Build a checklist of all items to verify
 
@@ -88,7 +88,7 @@ Produce structured output:
 ```yaml
 gap_analysis:
   scan_date: "2026-04-17"
-  prd_source: "docs/plans/2026-04-17-prd-structure.yaml"
+  prd_source: "{plans_dir}/2026-04-17-prd-structure.yaml"
   
   summary:
     total_stories: 45
