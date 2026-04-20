@@ -25,6 +25,8 @@ Organize tasks into time-boxed batches with parallel assignment, milestone gates
 
 ## Execution Flow
 
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
+
 ### Step 1: Load Tasks & Project Config
 
 1. Find the most recent `tasks.yaml`
@@ -153,20 +155,20 @@ milestones:
 
 Based on batch schedule, generate:
 
-1. **Prompt Templates** (`docs/plans/prompt-templates.md`):
+1. **Prompt Templates** (`{plans_dir}/prompt-templates.md`):
    - Task opening template (parameterized by task type)
    - Dev-loop progression template
    - Task closing template
    - Blocked/handoff templates
    
-2. **Collaboration Playbook** (`docs/plans/collaboration-playbook.md`):
+2. **Collaboration Playbook** (`{plans_dir}/collaboration-playbook.md`):
    - Team structure and line ownership
    - Daily workflow (Layer 1: independent, Layer 2: milestone sync, Layer 3: integration)
    - Commit message conventions
    - Contract change protocol
    - Red/Yellow task SLAs
 
-3. **Task Status File** (`docs/plans/task-status.md`):
+3. **Task Status File** (`{plans_dir}/task-status.md`):
    - Initialize from tasks.yaml with all tasks as pending
    - Include phase tables, progress summary section
    - Define update rules
@@ -229,12 +231,12 @@ graph LR
 
 ### Step 8: Output
 
-1. Write `docs/plans/{date}-execution-plan.yaml` (structured data)
-2. Write `docs/plans/{date}-execution-plan.md` (with Mermaid diagrams)
-3. Write `docs/plans/task-status.md` (initialized status table)
-4. Write `docs/plans/prompt-templates.md` (CC instruction templates)
-5. Write `docs/plans/collaboration-playbook.md` (team coordination)
-6. Write batch kickoff files to `docs/plans/batch-{n}-kickoff.md`
+1. Write `{plans_dir}/{date}-execution-plan.yaml` (structured data)
+2. Write `{plans_dir}/{date}-execution-plan.md` (with Mermaid diagrams)
+3. Write `{plans_dir}/task-status.md` (initialized status table)
+4. Write `{plans_dir}/prompt-templates.md` (CC instruction templates)
+5. Write `{plans_dir}/collaboration-playbook.md` (team coordination)
+6. Write batch kickoff files to `{plans_dir}/batch-{n}-kickoff.md`
 7. Write `docs/plans/project.yaml` (if not existed)
 
 ### Step 9: Human Review Checkpoint
