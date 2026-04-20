@@ -21,10 +21,10 @@ Analyze a completed milestone's execution data to identify patterns, bottlenecks
 
 - **Required**: Milestone ID
 - **Data sources**:
-  1. `docs/plans/tasks.yaml` or `task-status.md`
+  1. `{plans_dir}/tasks.yaml` or `{plans_dir}/task-status.md`
   2. Git log (commit history with timestamps)
   3. `.artifacts/registry.json` (artifact creation times)
-  4. `docs/plans/*-execution-plan.yaml` (planned timeline)
+  4. `{plans_dir}/*-execution-plan.yaml` (planned timeline)
 
 ## Execution Flow
 
