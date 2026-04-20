@@ -137,7 +137,39 @@ If no warnings (and no fatals): skip checkpoint, proceed automatically.
 
 Where `{date}` = today's date in `YYYY-MM-DD` format.
 
-If a file already exists at the target path: print a diff summary line (informational, non-blocking) and overwrite. Example: `"Overwriting {path} (12 modules → 13 modules, 1 constraint removed)"`. After overwrite, print a downstream-invalidation hint: `"Note: tasks.yaml for this plans_dir already exists and may now be inconsistent. Re-run /task-gen to regenerate."`. Users who want to keep both versions should run with a different `--plans-dir`.
+If a file already exists at the target path: print a diff-summary line (informational, non-blocking) and overwrite.
+
+**Required diff-summary format** (enforced — tests match on this):
+
+```
+Overwriting {path} ({old_count} → {new_count} {entity}[, {old_N} → {new_N} {entity2}]...)
+```
+
+- MUST start with the literal word `Overwriting ` followed by the absolute/relative path.
+- MUST contain at least one `{old_count} → {new_count} {entity}` delta inside parentheses, using the `→` arrow character (U+2192).
+- Per-artifact primary entities (use these labels; add secondary deltas as relevant):
+  - `gap-analysis.yaml` → `gaps` (primary), `P0` / `P1` / `P2` (secondary)
+  - `prd-structure.yaml` → `modules` (primary), `user_stories` / `constraints` (secondary)
+  - `task-hints.yaml` → `file_changes` (primary), `steps` / `non_goals` (secondary)
+- If `old_count` is 0 (file did not exist before overwrite — shouldn't reach this branch, but defensive), skip the diff and print `Writing {path} ({new_count} {entity})` instead.
+
+**Required downstream-invalidation hint** (print verbatim after the overwrite):
+
+```
+Note: tasks.yaml for this plans_dir already exists and may now be inconsistent. Re-run /task-gen to regenerate.
+```
+
+Only print the hint if `{plans_dir}/tasks.yaml` exists at overwrite time; otherwise skip it (no downstream to invalidate yet).
+
+Users who want to keep both versions should run with a different `--plans-dir`.
+
+**Worked example** — re-running ingest on an updated PRD:
+
+```
+Overwriting docs/plans/m2/2026-04-20-prd-structure.yaml (12 → 13 modules, 47 → 49 user_stories)
+Overwriting docs/plans/m2/2026-04-20-gap-analysis.yaml (17 → 18 gaps, 6 → 7 P0)
+Note: tasks.yaml for this plans_dir already exists and may now be inconsistent. Re-run /task-gen to regenerate.
+```
 
 ### 4.2 Write files
 
