@@ -28,6 +28,8 @@ Analyze a completed milestone's execution data to identify patterns, bottlenecks
 
 ## Execution Flow
 
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
+
 ### Step 1: Gather Data
 
 1. **Task data**: For each task in this milestone's phase, collect:
@@ -160,7 +162,7 @@ Actual: Wed 04-15 13:00 - 18:30 (5.5 hours, +37%)
 
 ### Step 5: Save & Share
 
-1. Write report to `docs/plans/retro-{milestone}-{date}.md`
+1. Write report to `{plans_dir}/retro-{milestone}-{date}.md`
 2. Commit: `retro: M1 retrospective`
 3. Print summary to terminal
 4. Suggest updating execution plan if patterns warrant schedule changes
