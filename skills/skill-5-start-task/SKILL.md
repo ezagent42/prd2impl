@@ -22,11 +22,13 @@ Launch a specific task, verify its prerequisites, update the status tracker, and
 - **Required**: Task ID (e.g., `T1A.1`)
 - **Optional**: `--autopilot={green|yellow|all}` — auto-approve default decisions at STOP points. See "Autopilot Mode" below.
 - **Data sources** (checked in order):
-  1. `docs/plans/tasks.yaml` (structured, preferred)
-  2. `docs/plans/*-tasks*.md` (markdown fallback)
-  3. `docs/plans/task-status.md` (legacy fallback)
+  1. `{plans_dir}/tasks.yaml` (structured, preferred)
+  2. `{plans_dir}/*-tasks*.md` (markdown fallback)
+  3. `{plans_dir}/task-status.md` (legacy fallback)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any read/write path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. Bare references to `tasks.yaml`, `task-status.md`, etc. are also `{plans_dir}`-scoped.
 
 ### Step 1: Load Task Definition
 

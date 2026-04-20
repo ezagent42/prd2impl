@@ -24,10 +24,12 @@ Detect changes in contract/interface files and analyze their impact on dependent
 - **Data sources**:
   1. `docs/contracts/` directory (contract definitions)
   2. Git diff (to detect changes)
-  3. `docs/plans/tasks.yaml` (to find affected tasks)
+  3. `{plans_dir}/tasks.yaml` (to find affected tasks)
   4. Codebase (to find consumers of the contract)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any read/write path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. Bare references to `tasks.yaml`, `task-status.md`, etc. are also `{plans_dir}`-scoped.
 
 ### Step 1: Identify Contract Files
 

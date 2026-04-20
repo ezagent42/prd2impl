@@ -21,11 +21,13 @@ Analyze the task graph and recommend the best next task(s) to work on.
 
 - **Optional**: Identity hint (e.g., `Dev1`, `Alice`), inferred from git branch if not provided
 - **Data sources**:
-  1. `docs/plans/tasks.yaml` (preferred)
-  2. `docs/plans/task-status.md` (fallback)
-  3. `docs/plans/*-execution-plan.yaml` (for batch context)
+  1. `{plans_dir}/tasks.yaml` (preferred)
+  2. `{plans_dir}/task-status.md` (fallback)
+  3. `{plans_dir}/*-execution-plan.yaml` (for batch context)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any read/write path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. Bare references to `tasks.yaml`, `task-status.md`, etc. are also `{plans_dir}`-scoped.
 
 ### Step 1: Identify Current Developer
 

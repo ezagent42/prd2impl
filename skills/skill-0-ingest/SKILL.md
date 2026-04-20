@@ -26,7 +26,7 @@ Convert multiple human-authored Markdown files into the YAML artifacts that `ski
 
 ## Outputs
 
-Three YAML files written to `docs/plans/{date}-*.yaml`:
+Three YAML files written to `{plans_dir}/{date}-*.yaml`:
 
 | File | Produced when | Consumed by |
 |------|--------------|-------------|
@@ -125,17 +125,51 @@ If no warnings (and no fatals): skip checkpoint, proceed automatically.
 
 ## Phase 4 · Write + Summary
 
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All paths below use `{plans_dir}` as the base directory.
+
 ### 4.1 Determine output paths
 
 ```
-docs/plans/{date}-gap-analysis.yaml      (if gap_analysis populated)
-docs/plans/{date}-prd-structure.yaml     (if prd_structure populated)
-docs/plans/{date}-task-hints.yaml        (if task_hints populated)
+{plans_dir}/{date}-gap-analysis.yaml      (if gap_analysis populated)
+{plans_dir}/{date}-prd-structure.yaml     (if prd_structure populated)
+{plans_dir}/{date}-task-hints.yaml        (if task_hints populated)
 ```
 
 Where `{date}` = today's date in `YYYY-MM-DD` format.
 
-If a file already exists with today's date: append `-v2` (then `-v3`, etc.) to avoid overwrite.
+If a file already exists at the target path: print a diff-summary line (informational, non-blocking) and overwrite.
+
+**Required diff-summary format** (enforced — tests match on this):
+
+```
+Overwriting {path} ({old_count} → {new_count} {entity}[, {old_N} → {new_N} {entity2}]...)
+```
+
+- MUST start with the literal word `Overwriting ` followed by the absolute/relative path.
+- MUST contain at least one `{old_count} → {new_count} {entity}` delta inside parentheses, using the `→` arrow character (U+2192).
+- Per-artifact primary entities (use these labels; add secondary deltas as relevant):
+  - `gap-analysis.yaml` → `gaps` (primary), `P0` / `P1` / `P2` (secondary)
+  - `prd-structure.yaml` → `modules` (primary), `user_stories` / `constraints` (secondary)
+  - `task-hints.yaml` → `file_changes` (primary), `steps` / `non_goals` (secondary)
+- If `old_count` is 0 (file did not exist before overwrite — shouldn't reach this branch, but defensive), skip the diff and print `Writing {path} ({new_count} {entity})` instead.
+
+**Required downstream-invalidation hint** (print verbatim after the overwrite):
+
+```
+Note: tasks.yaml for this plans_dir already exists and may now be inconsistent. Re-run /task-gen to regenerate.
+```
+
+Only print the hint if `{plans_dir}/tasks.yaml` exists at overwrite time; otherwise skip it (no downstream to invalidate yet).
+
+Users who want to keep both versions should run with a different `--plans-dir`.
+
+**Worked example** — re-running ingest on an updated PRD:
+
+```
+Overwriting docs/plans/m2/2026-04-20-prd-structure.yaml (12 → 13 modules, 47 → 49 user_stories)
+Overwriting docs/plans/m2/2026-04-20-gap-analysis.yaml (17 → 18 gaps, 6 → 7 P0)
+Note: tasks.yaml for this plans_dir already exists and may now be inconsistent. Re-run /task-gen to regenerate.
+```
 
 ### 4.2 Write files
 
@@ -153,9 +187,9 @@ skill-0-ingest complete
 Input files:  {N} processed, {D} dropped, {U} unknown/skipped
 
 Outputs written:
-  docs/plans/{date}-gap-analysis.yaml      {N_gaps} gaps  (P0={n0}, P1={n1}, P2={n2})
-  docs/plans/{date}-prd-structure.yaml     {N_mods} modules, {N_us} user stories
-  docs/plans/{date}-task-hints.yaml        {N_fc} file_changes, {N_steps} steps
+  {plans_dir}/{date}-gap-analysis.yaml      {N_gaps} gaps  (P0={n0}, P1={n1}, P2={n2})
+  {plans_dir}/{date}-prd-structure.yaml     {N_mods} modules, {N_us} user stories
+  {plans_dir}/{date}-task-hints.yaml        {N_fc} file_changes, {N_steps} steps
 
 Cross-validation:  {W} warnings (see above), 0 fatals
 
@@ -169,9 +203,9 @@ Review the output YAMLs above.
 
 Next step: run /task-gen to generate tasks from these artifacts.
 Pass the gap-analysis and prd-structure paths explicitly if needed:
-  /task-gen docs/plans/{date}-gap-analysis.yaml docs/plans/{date}-prd-structure.yaml
+  /task-gen {plans_dir}/{date}-gap-analysis.yaml {plans_dir}/{date}-prd-structure.yaml
 
-If task-hints.yaml was produced, skill-3 will pick it up automatically from docs/plans/.
+If task-hints.yaml was produced, skill-3 will pick it up automatically from {plans_dir}/.
 
 Ready to run /task-gen? (y/n — or adjust the YAML files first)
 ```
@@ -186,7 +220,7 @@ Ready to run /task-gen? (y/n — or adjust the YAML files first)
 | All files unknown after Phase 1 | `ERROR: all unknown` → abort with `--tag` suggestion |
 | One file fails extraction | Skip file + warning; continue with others |
 | Fatal cross-validation conflict | Abort Phase 4; print conflict pairs |
-| Same-day output file collision | Append `-v2` suffix |
+| Same-day re-run of /ingest-docs | Overwrite with diff-summary log (no suffix; use different --plans-dir for coexistence) |
 
 ## Component library
 

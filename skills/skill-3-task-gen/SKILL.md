@@ -19,13 +19,15 @@ Convert gap analysis results into a structured task list with dependency graph, 
 
 ## Input
 
-- **Required**: `docs/plans/*-gap-analysis.yaml` (output from skill-2 or skill-0)
-- **Required**: `docs/plans/*-prd-structure.yaml` (output from skill-1 or skill-0)
-- **Optional**: `docs/plans/*-task-hints.yaml` (output from skill-0 only — see §Step 2.5)
-- **Optional**: `docs/plans/project.yaml` (team configuration)
-- **Optional**: Existing `docs/plans/tasks.yaml` (for incremental updates)
+- **Required**: `{plans_dir}/*-gap-analysis.yaml` (output from skill-2 or skill-0)
+- **Required**: `{plans_dir}/*-prd-structure.yaml` (output from skill-1 or skill-0)
+- **Optional**: `{plans_dir}/*-task-hints.yaml` (output from skill-0 only — see §Step 2.5)
+- **Optional**: `docs/plans/project.yaml` (team configuration; always at project root)
+- **Optional**: Existing `{plans_dir}/tasks.yaml` (for incremental updates — see docs/superpowers/specs/2026-04-20-plans-dir-scoping-design.md §8 Limitation 6 for status)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
 
 ### Step 1: Load Gap Analysis
 
@@ -192,8 +194,8 @@ warnings:
 
 ### Step 7: Output
 
-1. Write `docs/plans/{date}-tasks.yaml` (structured data)
-2. Write `docs/plans/{date}-tasks.md` (human-readable table format)
+1. Write `{plans_dir}/{date}-tasks.yaml` (structured data)
+2. Write `{plans_dir}/{date}-tasks.md` (human-readable table format)
 3. Write dependency graph as Mermaid in the markdown file
 4. Print summary to terminal
 
@@ -205,7 +207,7 @@ warnings:
 > Type split: {G} Green / {Y} Yellow / {R} Red
 > Critical path: {CP} tasks deep
 >
-> Review `docs/plans/{date}-tasks.yaml` and confirm:
+> Review `{plans_dir}/{date}-tasks.yaml` and confirm:
 > 1. Task granularity — any too large (>8h) or too small (<30min)?
 > 2. Color classification — any Green that should be Yellow/Red?
 > 3. Dependencies — any missing or incorrect links?

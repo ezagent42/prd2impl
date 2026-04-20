@@ -21,12 +21,14 @@ Run milestone gate verification: check task completion, run automated tests, ver
 
 - **Required**: Milestone ID (e.g., `M0`, `M1`, `M2`)
 - **Data sources**:
-  1. `docs/plans/*-execution-plan.yaml` (milestone definitions, gate checks)
-  2. `docs/plans/tasks.yaml` or `task-status.md` (task statuses)
+  1. `{plans_dir}/*-execution-plan.yaml` (milestone definitions, gate checks)
+  2. `{plans_dir}/tasks.yaml` or `{plans_dir}/task-status.md` (task statuses)
   3. `.artifacts/registry.json` (artifact completeness)
   4. Batch kickoff files (smoke test scenarios)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any read path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. `.artifacts/` paths are NOT scoped — they remain shared across plans_dir (see design spec §8 Limitation 1).
 
 ### Step 1: Load Milestone Definition
 

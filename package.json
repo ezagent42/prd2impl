@@ -1,6 +1,6 @@
 {
   "name": "prd2impl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "peerDependencies": {
     "superpowers": "^5.0.0",

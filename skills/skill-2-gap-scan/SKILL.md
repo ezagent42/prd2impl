@@ -19,16 +19,18 @@ Automatically scan the existing codebase against PRD requirements to identify im
 
 ## Input
 
-- **Required**: `docs/plans/*-prd-structure.yaml` (output from skill-1)
+- **Required**: `{plans_dir}/*-prd-structure.yaml` (output from skill-1)
 - **Optional**: Existing codebase in the working directory
 
 If `prd-structure.yaml` doesn't exist, prompt the user to run `/prd-analyze` first.
 
 ## Execution Flow
 
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
+
 ### Step 1: Load PRD Structure
 
-1. Find the most recent `docs/plans/*-prd-structure.yaml`
+1. Find the most recent `{plans_dir}/*-prd-structure.yaml`
 2. Parse modules, user stories, NFRs, constraints
 3. Build a checklist of all items to verify
 
@@ -86,7 +88,7 @@ Produce structured output:
 ```yaml
 gap_analysis:
   scan_date: "2026-04-17"
-  prd_source: "docs/plans/2026-04-17-prd-structure.yaml"
+  prd_source: "{plans_dir}/2026-04-17-prd-structure.yaml"
   
   summary:
     total_stories: 45
@@ -141,7 +143,7 @@ gap_analysis:
 
 ### Step 5: Output
 
-1. Write to `docs/plans/{date}-gap-analysis.yaml`
+1. Write to `{plans_dir}/{date}-gap-analysis.yaml`
 2. Print summary to terminal:
 
 ```
@@ -169,7 +171,7 @@ Dependency Gaps: 1 missing SDK
 
 > Gap analysis complete. {N}% coverage, {M} gaps identified.
 >
-> Review `docs/plans/{date}-gap-analysis.yaml` and confirm:
+> Review `{plans_dir}/{date}-gap-analysis.yaml` and confirm:
 > 1. Are there implemented features I missed? (false negatives)
 > 2. Are there gaps that should be descoped? (won't implement)
 > 3. Any gaps that are actually blocked on external dependencies?

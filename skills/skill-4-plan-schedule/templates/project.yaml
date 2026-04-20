@@ -40,6 +40,12 @@ project:
     #   branch: dev-infra
     #   skills: [devops, infrastructure]
 
+  # Artifact location (optional)
+  # Where prd2impl artifacts (tasks.yaml, task-status.md, etc.) are written/read.
+  # Default: "docs/plans/" (project root). Use a subdirectory to isolate
+  # milestones/scopes when multiple run in parallel on the same project.
+  # plans_dir: docs/plans/m2
+
   # Work parameters
   work_hours_per_day: 8
   parallel_capacity: 1  # Number of lines that work simultaneously

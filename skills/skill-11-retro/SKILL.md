@@ -21,12 +21,14 @@ Analyze a completed milestone's execution data to identify patterns, bottlenecks
 
 - **Required**: Milestone ID
 - **Data sources**:
-  1. `docs/plans/tasks.yaml` or `task-status.md`
+  1. `{plans_dir}/tasks.yaml` or `{plans_dir}/task-status.md`
   2. Git log (commit history with timestamps)
   3. `.artifacts/registry.json` (artifact creation times)
-  4. `docs/plans/*-execution-plan.yaml` (planned timeline)
+  4. `{plans_dir}/*-execution-plan.yaml` (planned timeline)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. `.artifacts/` paths are NOT scoped — they remain shared across plans_dir (see design spec §8 Limitation 1).
 
 ### Step 1: Gather Data
 
@@ -160,7 +162,7 @@ Actual: Wed 04-15 13:00 - 18:30 (5.5 hours, +37%)
 
 ### Step 5: Save & Share
 
-1. Write report to `docs/plans/retro-{milestone}-{date}.md`
+1. Write report to `{plans_dir}/retro-{milestone}-{date}.md`
 2. Commit: `retro: M1 retrospective`
 3. Print summary to terminal
 4. Suggest updating execution plan if patterns warrant schedule changes
