@@ -28,7 +28,7 @@ error message if any fails:
    error: `"plans_dir must be a repository-relative path. Got: '<input>'"`
 3. **`..` segment check**: after split by `/`, if any segment is `..` →
    error: `"plans_dir must not contain '..' segments. Got: '<input>'"`
-4. **Empty string**: treat as default `docs/plans/` (no error)
+4. **Empty string**: treat as default `docs/plans` (no error)
 
 ## Usage in SKILL.md files
 
