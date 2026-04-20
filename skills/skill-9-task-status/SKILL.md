@@ -19,11 +19,13 @@ Display a comprehensive progress dashboard with statistics, visualizations, and 
 ## Input
 
 - **Data sources** (checked in order):
-  1. `docs/plans/tasks.yaml` (structured, preferred)
-  2. `docs/plans/task-status.md` (fallback)
-  3. `docs/plans/*-execution-plan.yaml` (for timeline comparison)
+  1. `{plans_dir}/tasks.yaml` (structured, preferred)
+  2. `{plans_dir}/task-status.md` (fallback)
+  3. `{plans_dir}/*-execution-plan.yaml` (for timeline comparison)
 
 ## Execution Flow
+
+> **Path resolution**: Before constructing any read/output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references above/below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
 
 ### Step 1: Load Data
 
