@@ -19,11 +19,11 @@ Convert gap analysis results into a structured task list with dependency graph, 
 
 ## Input
 
-- **Required**: `docs/plans/*-gap-analysis.yaml` (output from skill-2 or skill-0)
-- **Required**: `docs/plans/*-prd-structure.yaml` (output from skill-1 or skill-0)
-- **Optional**: `docs/plans/*-task-hints.yaml` (output from skill-0 only — see §Step 2.5)
-- **Optional**: `docs/plans/project.yaml` (team configuration)
-- **Optional**: Existing `docs/plans/tasks.yaml` (for incremental updates)
+- **Required**: `{plans_dir}/*-gap-analysis.yaml` (output from skill-2 or skill-0)
+- **Required**: `{plans_dir}/*-prd-structure.yaml` (output from skill-1 or skill-0)
+- **Optional**: `{plans_dir}/*-task-hints.yaml` (output from skill-0 only — see §Step 2.5)
+- **Optional**: `docs/plans/project.yaml` (team configuration; always at project root)
+- **Optional**: Existing `{plans_dir}/tasks.yaml` (for incremental updates — see docs/superpowers/specs/2026-04-20-plans-dir-scoping-design.md §8.6 for status)
 
 ## Execution Flow
 
