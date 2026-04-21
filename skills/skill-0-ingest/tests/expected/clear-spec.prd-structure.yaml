@@ -1,0 +1,19 @@
+# Expected output for tests/fixtures/role-detection/clear-design-spec.md (v0.2.1+)
+# Verifies design-spec's NEW prd-structure output (previously this fixture only produced task-hints.yaml).
+
+prd_structure:
+  source_files:
+    - "tests/fixtures/role-detection/clear-design-spec.md"
+
+  modules:
+    - id: MOD-01
+      name: "Architecture"
+      description: "Three-panel shell: TopBar + VerticalRail + Canvas."
+      prd_sections: ["§1"]
+      source: "design-spec"
+      coarse: true   # §1 has no ###  sub-headings
+
+  user_stories: []
+  nfrs: []           # fixture has no §Requirements section
+  constraints: []    # fixture has no §Known Limitations section
+  external_deps: []
