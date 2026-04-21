@@ -130,3 +130,21 @@ Each fixture dir contains minimal in-memory YAML snapshots (not full MDs) named:
 - `expected-output.txt`
 
 Cross-validator reads these YAMLs directly (bypassing extraction phases) for unit-level testing.
+
+## Design-spec warnings (v0.2.1+)
+
+When Phase 2b processes a file with `detected_role: design-spec`, emit these warnings
+if the corresponding sections were not found:
+
+| Condition | Warning message (info level) |
+|---|---|
+| §Design section missing | `design-spec <file>: no §Design/§Architecture section, modules[] empty` |
+| §Requirements section missing | `design-spec <file>: no §Behavioral Requirements section, nfrs[] empty` |
+| §Known Limitations section missing | `design-spec <file>: no §Known Limitations section, constraints[] empty` |
+| §Design present but no `###` sub-headings | `design-spec <file>: §Design has no sub-headings, treated as single coarse module (MOD-01.coarse=true)` |
+| `prd_structure` fully empty after extraction | `design-spec <file>: produced no prd-structure content, prd-structure.yaml skipped for this file` |
+| Both `prd_structure` and `task_hints` empty | `design-spec <file>: produced no output — file content had no recognized sections. Check file categorization (role-detector may have misclassified).` |
+
+These warnings are **info-level, non-blocking**. They appear in the Phase 3 human review
+table so the user can decide whether the extraction was good enough or the source doc
+needs editing before re-running /ingest-docs.
