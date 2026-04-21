@@ -13,6 +13,7 @@ For `plan` and `user-stories` roles it applies a subset of that logic.
 | `prd` | modules, user_stories, nfrs, constraints, external_deps | — (full skill-1 logic) |
 | `plan` | modules (as phases/milestones), constraints only | user_stories, nfrs, external_deps |
 | `user-stories` | user_stories only | modules, nfrs, constraints, external_deps |
+| `design-spec` | modules (partial), nfrs, constraints | user_stories, external_deps |
 
 ## Extraction: role=prd (full)
 
@@ -168,3 +169,111 @@ Expected:
 - `nfrs == []`
 
 See `tests/expected/clear-prd.prd-structure.yaml` and `tests/expected/clear-plan.prd-structure.yaml`.
+
+## Extraction: role=design-spec
+
+A design-spec document (typically from `superpowers:brainstorming` output) describes
+*what to build* and *how* — modules, behavioral requirements, and known limitations.
+It usually lacks user stories (those go in `prd` or `user-stories` roles).
+
+### Section scanning
+
+Scan the entire document for top-level (`##`) and second-level (`###`) headings.
+Match against the following patterns (case-insensitive, with or without numeric prefix
+like `## 3.` or `### 3.1`):
+
+| Target field | Heading keywords |
+|---|---|
+| `modules[]` | "Design", "设计", "Architecture", "架构", "方案" |
+| `nfrs[]` | "Behavioral Requirements", "行为约束", "Requirements", "需求", "Acceptance", "验收条件", "约束" |
+| `constraints[]` | "Known Limitations", "已知限制", "Limitations", "Constraints", "已知约束" |
+
+**SKIP** sections: "Goal / 目标", "Current State / 现状" — these are narrative context
+and do not map to any prd-structure field.
+
+**Section order**: irrelevant. Scan by heading keyword, not by position.
+
+### Extracting modules
+
+**Case 1: §Design section has `###` sub-headings.**
+
+Each sub-heading becomes one module:
+
+```yaml
+- id: MOD-{N:02d}
+  name: <sub-heading text, stripped of numeric prefix>
+  description: <first paragraph of that sub-section>
+  prd_sections: ["§3.{M}"]   # or slug if heading has no number
+  source: "design-spec"
+  coarse: false
+```
+
+**Case 2: §Design section has NO sub-headings.**
+
+Entire section becomes a single coarse module:
+
+```yaml
+- id: MOD-01
+  name: "Design"   # or the exact heading text
+  description: <first paragraph>
+  prd_sections: ["§3"]   # or slug
+  source: "design-spec"
+  coarse: true
+```
+
+**prd_sections encoding**:
+- Numbered heading `### 3.1 Redis-backed Counter` → `["§3.1"]`
+- Unnumbered heading `### Redis-backed Counter` → `["redis-backed-counter"]` (slug: lowercase, hyphens)
+- Numbered top-level `## 3. Design` → `["§3"]`
+- Unnumbered top-level `## Design` → `["design"]`
+
+### Extracting nfrs
+
+Each bullet (`- ...`) or numbered item (`1. ...`) under the §Requirements section
+becomes one NFR:
+
+```yaml
+- id: NFR-{N:02d}
+  category: <auto-detect>
+  requirement: <bullet text, verbatim>
+  prd_ref: "§4"   # or slug
+```
+
+**Category heuristic** (applied to lowercased requirement text):
+- contains "performance", "latency", "qps", "throughput", "延迟", "性能" → `performance`
+- contains "compat", "backcompat", "backward", "兼容" → `compatibility`
+- contains "security", "auth", "安全" → `security`
+- else → `general`
+
+`metric` / `target` fields are typically absent in design-spec — omit from output (don't
+emit empty strings).
+
+### Extracting constraints
+
+Each bullet under §Known Limitations:
+
+```yaml
+- id: CON-{N:02d}
+  type: <auto-detect>
+  description: <bullet text verbatim>
+  rationale: <if bullet is "X: Y" or "X（Y）", the Y part; else same as description>
+  prd_ref: "§8"   # or slug
+```
+
+**Type heuristic** (applied to lowercased text):
+- contains "tech", "tool", "framework", "library" → `technology`
+- contains "schedule", "deadline", "date", "deliver" → `schedule`
+- else → `general`
+
+### user_stories handling
+
+**Intentionally not extracted.** design-spec focuses on "what/how", not "who/why".
+Output `user_stories: []` (empty array) always for design-spec role.
+
+### Graceful degradation
+
+If the document lacks a §Design section entirely: `modules: []`, no error.
+If the document lacks §Requirements: `nfrs: []`, no error.
+If the document lacks §Known Limitations: `constraints: []`, no error.
+If ALL three are absent: emit empty `prd_structure`; skill-0 Phase 4.1 will skip writing
+`prd-structure.yaml`. See `cross-validator.md` for the corresponding warning messages.
