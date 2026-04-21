@@ -353,8 +353,84 @@ Splice the emitted `external_deps` list into the in-progress `prd_structure` obj
 
 ### user_stories handling
 
-**Intentionally not extracted.** design-spec focuses on "what/how", not "who/why".
-Output `user_stories: []` (empty array) always for design-spec role.
+**Default: not extracted.** design-spec focuses on "what/how", not "who/why".
+Output `user_stories: []` (empty array) for design-spec role **unless the
+`--synthesize-user-stories` flag was passed to `/ingest-docs`**.
+
+### user_stories LLM synthesis (role=design-spec, opt-in)
+
+Gated on the `--synthesize-user-stories` flag registered in skill-0 SKILL.md §Inputs. When the flag is absent: skip this entire subsection, output `user_stories: []`.
+
+#### Trigger (when flag is set)
+
+Run the LLM pass IF AND ONLY IF:
+1. The `--synthesize-user-stories` flag was set, AND
+2. A section heading matching `Scope` / `范围` was found, AND
+3. Regex-extracted `user_stories` is empty (always true for design-spec).
+
+If flag set but §Scope absent → warn `--synthesize-user-stories set but §Scope not found in {file}; user_stories remains []`. Do NOT make the LLM call.
+
+#### Extract §Scope content
+
+Capture the §Scope section from the first heading line through the next `##`-level heading (exclusive). This is the input to the LLM.
+
+#### LLM prompt
+
+Invoke the LLM (model: `claude-sonnet-4-6`) with:
+
+```
+System: You extract user stories from design spec Scope sections. Output YAML only.
+
+User: Extract user stories from this design spec's Scope section.
+
+Rules:
+- Produce one user story per surface/row. Max 6 stories.
+- `persona` MUST be a string that appears verbatim in the Scope text.
+- `action` + `goal` describe what the persona does on that surface, using the
+  spec's own language. Do NOT invent features not hinted at in the Scope.
+- `acceptance_criteria` MUST be []. Do not hallucinate ACs.
+- Return YAML in this exact shape:
+
+user_stories:
+  - id: US-NN
+    module: MOD-??          # pick from: {modules_list}
+    persona: "..."
+    action: "..."
+    goal: "..."
+    acceptance_criteria: []
+    prd_ref: "§Scope row N"
+    source: synthesized
+
+Scope section:
+---
+{scope_text}
+---
+
+Modules available: {modules_list}
+```
+
+Substitute before the call:
+- `{scope_text}` = the extracted §Scope block.
+- `{modules_list}` = comma-separated list of module IDs from the in-progress `prd_structure.modules`. If the modules list is empty, pass `MOD-01` as a fallback AND emit one synthetic module `MOD-01 "Scope"` so stories have a valid anchor.
+
+#### Parse LLM output
+
+1. Parse the returned YAML (expect a top-level `user_stories:` key).
+2. Validate each story:
+   - `persona` must be a verbatim substring of the §Scope text (literal check). If not found verbatim → drop that story; log warning `LLM persona {persona} not verbatim in §Scope; story dropped`.
+   - `acceptance_criteria` must be `[]` (empty list). If not, force to `[]` and warn.
+   - Sequential re-numbering of `id` after validation.
+3. Splice the validated list into the in-progress `prd_structure.user_stories`.
+
+#### Error handling
+
+- LLM call fails (timeout, quota) → `user_stories: []`, emit warning `LLM user_stories synthesis skipped: {reason}. Re-run /ingest-docs to retry.`
+- LLM output not valid YAML → `user_stories: []`, emit warning + log the raw output for debugging (truncate to 1000 chars).
+- No personas pass the verbatim-substring check → `user_stories: []`, warn `LLM produced 0 stories with valid personas; check Scope format`.
+
+#### Cost ceiling
+
+Maximum 1 LLM call per `/ingest-docs` invocation per design-spec file. If multiple design-spec files are ingested in the same run, the call fires once per file (cap still "1 per file"). Cache §Scope text in memory so no repeated extraction.
 
 ### Graceful degradation
 

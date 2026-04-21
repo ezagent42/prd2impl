@@ -15,6 +15,7 @@ Convert multiple human-authored Markdown files into the YAML artifacts that `ski
 
 - User runs `/ingest-docs [file1.md] [file2.md] ...`
 - User provides `--tag role=path` overrides alongside file paths
+- User provides `--synthesize-user-stories` flag (opt-in LLM synthesis of user_stories for design-spec role — see §Inputs)
 - User says "ingest my docs", "read my markdown files", "import gap analysis and design spec"
 
 ## Inputs
@@ -23,6 +24,8 @@ Convert multiple human-authored Markdown files into the YAML artifacts that `ski
 - **Optional**: `--tag <role>=<path>` overrides (force a role instead of auto-detecting)
   - Valid roles: `gap`, `design-spec`, `plan`, `prd`, `user-stories`
   - Example: `--tag spec=a.md --tag gap=b.md`
+
+- **Optional**: `--synthesize-user-stories` — opt-in flag. When passed and any input file is classified as `role=design-spec`, run the LLM synthesis pass described in `lib/prd-extractor.md §user_stories LLM synthesis`. Default: off, which preserves existing `user_stories: []` behavior for design-spec.
 
 ## Outputs
 
