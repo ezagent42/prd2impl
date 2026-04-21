@@ -16,7 +16,7 @@ Scan the document for section headings that match these patterns (case-insensiti
 | Section type | Heading patterns | Maps to field |
 |---|---|---|
 | File changes | "File Changes", "Files Changed", "文件变更", "Changed Files", "文件改动", `## N. 文件改动` | `file_changes[]` |
-| Implementation steps / order | "Implementation Steps", "Implementation Order", "实施步骤", "实施顺序", "Steps", `## N. 实施顺序` | `implementation_steps[]` |
+| Implementation steps / order | "Implementation Steps", "Implementation Order", "实施步骤", "实施顺序", "Steps", "Rollout", "Phasing", "灰度", "阶段", `## N. 实施顺序` | `implementation_steps[]` |
 | Non-goals | "Non-Goals", "Non Goals", "Out of Scope", "非目标", "不做", "### 非目标" (subsection of 目标与非目标) | `non_goals[]` |
 | Test strategy / testing | "Testing", "Test Strategy", "测试策略", "Tests" | `test_strategy` |
 | Risks / open questions | "Risks", "Open Questions", "Open Risks", "风险", "开放风险", "待决事项" | `risks[]` |

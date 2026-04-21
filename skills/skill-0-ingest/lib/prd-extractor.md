@@ -231,6 +231,18 @@ Entire section becomes a single coarse module:
 - Numbered top-level `## 3. Design` → `["§3"]`
 - Unnumbered top-level `## Design` → `["design"]`
 
+**Slug generation algorithm** (for unnumbered headings):
+1. Lowercase ASCII letters; leave CJK and other non-ASCII characters untouched
+2. Replace any run of whitespace OR ASCII punctuation (`,`, `.`, `:`, `;`, `/`, `\`, `(`, `)`, etc.)
+   with a single `-`
+3. Strip leading/trailing `-`
+4. Preserve existing hyphens (don't collapse `redis-backed` to `redis-backed`; it stays as-is)
+
+Examples:
+- `"Redis-backed Counter"` → `"redis-backed-counter"`
+- `"架构模块 A"` → `"架构模块-a"` (CJK retained, "A" lowercased)
+- `"Step 1: Load Data"` → `"step-1-load-data"`
+
 ### Extracting nfrs
 
 Each bullet (`- ...`) or numbered item (`1. ...`) under the §Requirements section
@@ -259,9 +271,13 @@ Each bullet under §Known Limitations:
 ```yaml
 - id: CON-{N:02d}
   type: <auto-detect>
-  description: <bullet text; if bullet is "X: Y" or "X（Y）", the X part (parenthetical/colon-suffix stripped when rationale is extracted from it); else full bullet text>
-  rationale: <if bullet is "X: Y" or "X（Y）", the Y part; else same as description>
+  description: <bullet text; if bullet ENDS WITH "（Y）" or ": Y" as a trailing suffix, the part before (with suffix stripped); else full bullet text>
+  rationale: <if bullet ends with trailing "（Y）" or ": Y" suffix, the Y part; else same as description>
   prd_ref: "§8"   # or slug
+
+**Important**: the split rule only fires for **trailing** parens/colon. A bullet like
+`"不处理全局限流（只 per-key），per-user 全局限流需另议"` has an INLINE paren followed
+by more text — no split; description == rationale == whole bullet.
 ```
 
 **Type heuristic** (applied to lowercased text):
