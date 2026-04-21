@@ -1,0 +1,3 @@
+# Intentional: design-spec-loose.md has no §3 Design / §4 Requirements / §8 Constraints sections,
+# so prd_structure is empty. Per spec §5, skill-0 should SKIP writing prd-structure.yaml in this case.
+# cross-validator prints warning: "design-spec <file>: produced no prd-structure content, output file skipped"

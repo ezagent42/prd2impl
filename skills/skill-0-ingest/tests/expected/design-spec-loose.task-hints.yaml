@@ -1,0 +1,15 @@
+task_hints:
+  source_files:
+    - "tests/fixtures/design-spec/design-spec-loose.md"
+
+  file_changes:
+    - path: "src/middleware/session.py"
+      change_type: modify
+      purpose: "bump cookie max-age from 3600 to 86400"
+      source_anchor: "5-file-changes"
+      related_gap_refs: []
+
+  implementation_steps: []
+  non_goals: []
+  test_strategy: "Verify cookie header in browser devtools; no automated test needed for 1-line change."
+  risks: []

@@ -138,6 +138,18 @@ skill-3 reads `task-hints.yaml` automatically if present; behavior is backward-c
 
 If YAML files don't exist yet, skills will fall back to reading existing markdown files (backward compatible with hand-written task-status.md).
 
+### Design-spec dual output (v0.2.1+)
+
+When `/ingest-docs` processes a file classified as `design-spec` (typical output of
+`superpowers:brainstorming`), it now produces **two YAML artifacts** instead of one:
+
+- `{plans_dir}/{date}-task-hints.yaml` — file_changes, implementation_steps, test_strategy (unchanged)
+- `{plans_dir}/{date}-prd-structure.yaml` — **partial**: modules (from §Design), nfrs (from §Requirements), constraints (from §Known Limitations)
+
+User stories are intentionally not extracted from design-spec — supply a separate
+`user-stories` file if needed. See
+`docs/superpowers/specs/2026-04-21-design-spec-ingest-design.md` for full mapping.
+
 ## Isolating Multiple Scopes with `plans_dir`
 
 When running multiple milestones/projects in parallel on the same repo
