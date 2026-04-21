@@ -1,0 +1,48 @@
+# Expected output for sparse-opt-in.md with --synthesize-user-stories flag ON.
+# LLM-synthesized user_stories — exact wording will differ per run;
+# match on these load-bearing invariants:
+#   - len(user_stories) == 2 (one per surface)
+#   - each story's `persona` ∈ { "tenant admin" } (verbatim from §Scope)
+#   - each story has `source: synthesized`
+#   - extraction.llm_fields == [user_stories]
+#   - external_deps == [] (no §Dependencies in fixture)
+#
+# For flag-OFF behavior, the expected output is identical EXCEPT:
+#   - user_stories: []
+#   - extraction.llm_fields: []
+# No separate expected file needed — Task 9 Step 2a asserts this directly.
+
+prd_structure:
+  source_type: "ingested"
+  source_role: "design-spec"
+  source_files: ["sparse-opt-in.md"]
+  extraction:
+    regex_fields: [modules, nfrs, constraints, external_deps]
+    llm_fields: [user_stories]
+  modules:
+    - id: MOD-01
+      name: "Component"
+      description: "A notifications service with in-app + email channels."
+      prd_sections: ["§4 Component"]
+      sub_modules: []
+  user_stories:
+    # LLM output — exact strings will vary; structure invariants pinned above
+    - id: US-01
+      module: MOD-01
+      persona: "tenant admin"
+      action: "<LLM-generated>"
+      goal: "<LLM-generated>"
+      acceptance_criteria: []
+      prd_ref: "§2 Scope row 1"
+      source: synthesized
+    - id: US-02
+      module: MOD-01
+      persona: "tenant admin"
+      action: "<LLM-generated>"
+      goal: "<LLM-generated>"
+      acceptance_criteria: []
+      prd_ref: "§2 Scope row 2"
+      source: synthesized
+  nfrs: []
+  constraints: []
+  external_deps: []
