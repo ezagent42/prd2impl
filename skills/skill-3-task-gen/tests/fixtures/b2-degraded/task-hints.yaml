@@ -1,0 +1,33 @@
+task_hints:
+  source_type: "ingested"
+  source_role: "design-spec"
+  source_files: ["fixture-input.md"]
+  file_changes:
+    - path: "src/feature/A.ts"
+      change_type: create
+      purpose: "new feature A"
+      source_anchor: "§5.1"
+      related_gap_refs: []
+    - path: "src/feature/B.ts"
+      change_type: modify
+      purpose: "wire A into B"
+      source_anchor: "§5.2"
+      related_gap_refs: []
+  implementation_steps:
+    - step: 1
+      description: "Build feature A as a pure module with unit tests"
+      depends_on_steps: []
+      touches_files: ["src/feature/A.ts"]
+      source_anchor: "§5.1"
+    - step: 2
+      description: "Wire feature A into B; regression tests"
+      depends_on_steps: [1]
+      touches_files: ["src/feature/B.ts"]
+      source_anchor: "§5.2"
+  non_goals:
+    - "Feature C"
+  test_strategy:
+    preserved_testids: []
+    new_tests: ["tests/A.test.ts"]
+    e2e_delta: null
+  risks: []
