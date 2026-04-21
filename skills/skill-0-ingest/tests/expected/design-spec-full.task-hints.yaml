@@ -1,0 +1,41 @@
+# Expected output for tests/fixtures/design-spec/design-spec-full.md
+# Verifies spec-extractor still produces task-hints unchanged.
+
+task_hints:
+  source_files:
+    - "tests/fixtures/design-spec/design-spec-full.md"
+
+  file_changes:
+    - path: "src/middleware/redis_limiter.py"
+      change_type: create
+      purpose: "Redis-backed counter"
+      source_anchor: "5-file-changes"
+      related_gap_refs: []
+    - path: "src/middleware/sliding_window.py"
+      change_type: create
+      purpose: "algorithm impl"
+      source_anchor: "5-file-changes"
+      related_gap_refs: []
+    - path: "src/middleware/rate_limit.py"
+      change_type: modify
+      purpose: "delegate to redis_limiter"
+      source_anchor: "5-file-changes"
+      related_gap_refs: []
+    - path: "src/config.py"
+      change_type: modify
+      purpose: "add REDIS_URL"
+      source_anchor: "5-file-changes"
+      related_gap_refs: []
+
+  implementation_steps:
+    - "实现 redis_limiter + 单测"
+    - "实现 sliding_window + 单测"
+    - "改 rate_limit.py delegation + 回归测试"
+    - "灰度：先 10% 流量，观察 24h"
+    - "全量切换"
+
+  non_goals: []
+
+  test_strategy: "Fixture suite under tests/middleware/test_redis_limiter.py covering redis-up / redis-down / concurrent hits. E2E: run load test at 1000 QPS, observe 429 rate."
+
+  risks: []

@@ -1,0 +1,63 @@
+# Expected output for tests/fixtures/design-spec/design-spec-full.md
+# Verifies prd-extractor's role=design-spec routing.
+
+prd_structure:
+  source_files:
+    - "tests/fixtures/design-spec/design-spec-full.md"
+
+  modules:
+    - id: MOD-01
+      name: "Redis-backed Counter"
+      description: "新建 src/middleware/redis_limiter.py，用 Redis INCR + EXPIRE 做分布式计数。"
+      prd_sections: ["§3.1"]
+      source: "design-spec"
+      coarse: false
+
+    - id: MOD-02
+      name: "Sliding Window Algorithm"
+      description: "替换 fixed-window 为 sliding-window log，精度到毫秒。"
+      prd_sections: ["§3.2"]
+      source: "design-spec"
+      coarse: false
+
+    - id: MOD-03
+      name: "Fallback Path"
+      description: "Redis 不可用时，回退到 in-memory limiter 并 log warning。"
+      prd_sections: ["§3.3"]
+      source: "design-spec"
+      coarse: false
+
+  user_stories: []
+
+  nfrs:
+    - id: NFR-01
+      category: performance
+      requirement: "P99 限流判定延迟 < 5ms"
+      prd_ref: "§4"
+    - id: NFR-02
+      category: general
+      requirement: "重启后 60 秒内恢复限流精度"
+      prd_ref: "§4"
+    - id: NFR-03
+      category: compatibility
+      requirement: "向后兼容现有 @rate_limit 装饰器签名"
+      prd_ref: "§4"
+
+  constraints:
+    - id: CON-01
+      type: general
+      description: "Redis 单点若宕机，回退到 in-memory 会丢限流精度"
+      rationale: "trade-off 选可用性"
+      prd_ref: "§8"
+    - id: CON-02
+      type: general
+      description: "sliding-window 精度依赖 Redis 时钟同步"
+      rationale: "sliding-window 精度依赖 Redis 时钟同步"
+      prd_ref: "§8"
+    - id: CON-03
+      type: general
+      description: "不处理全局限流（只 per-key），per-user 全局限流需另议"
+      rationale: "不处理全局限流（只 per-key），per-user 全局限流需另议"
+      prd_ref: "§8"
+
+  external_deps: []
