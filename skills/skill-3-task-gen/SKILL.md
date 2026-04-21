@@ -31,9 +31,9 @@ Convert gap analysis results into a structured task list with dependency graph, 
 
 ### Step 1: Load Gap Analysis
 
-1. Find the most recent `gap-analysis.yaml` and `prd-structure.yaml`
+1. Find the most recent `gap-analysis.yaml` and `prd-structure.yaml`. **Do NOT error on miss** — if either file is absent, remember which is missing and proceed to §Step 1.5 to evaluate B2 degradation before emitting any error.
 2. Also check for the most recent `task-hints.yaml` — if found, load it (see §Step 2.5)
-3. Group gaps by module
+3. Group gaps by module (skip if `gap_analysis` was synthesized in §Step 1.5)
 4. Sort by estimated effort and dependency chain
 
 ### Step 1.5: B2 Degradation — task-hints-only mode
