@@ -2,6 +2,9 @@ prd_structure:
   source_type: "ingested"
   source_role: "design-spec"
   source_files: ["deps-table.md"]
+  extraction:
+    regex_fields: [modules, nfrs, constraints, external_deps]
+    llm_fields: []
   modules:
     - id: MOD-01
       name: "Component"
