@@ -8,7 +8,7 @@ Produce a confirmation table for human review before extraction begins.
 | Role | Produces | Typical document |
 |------|----------|-----------------|
 | `gap` | gap-analysis.yaml | Gap / 缺口 / 缺失 analysis listing items with P0/P1/P2 |
-| `design-spec` | task-hints.yaml | Design spec / 设计方案 with file-change lists and implementation steps |
+| `design-spec` | prd-structure.yaml (partial: modules, nfrs, constraints) + task-hints.yaml | Design spec / 设计方案 with file-change lists and implementation steps. After v0.2.1, also extracts §Design modules, §Requirements nfrs, §Known Limitations constraints into a partial prd-structure.yaml. |
 | `plan` | prd-structure.yaml (partial) + task-hints.yaml (steps only) | Plan / 计划 with milestones and phases |
 | `prd` | prd-structure.yaml (full) | PRD / Requirements with user stories and NFRs |
 | `user-stories` | prd-structure.yaml (user_stories section) | Standalone user-story list |
