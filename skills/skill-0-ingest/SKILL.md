@@ -77,9 +77,11 @@ If any files have `detected_role: gap`:
 ### 2b. Spec extraction
 
 If any files have `detected_role: design-spec`:
-- **Read**: `lib/spec-extractor.md` — follow it exactly.
-- Build `task_hints` dict in memory.
-- Print: `  Extracted {F} file_changes, {S} steps, {G} non_goals from {files}`
+- **Read**: `lib/spec-extractor.md` — follow it exactly for task-hints extraction.
+- **Read**: `lib/prd-extractor.md §Extraction: role=design-spec` — follow it for modules/nfrs/constraints extraction.
+- Build `task_hints` dict in memory (from spec-extractor).
+- Build or extend `prd_structure` dict in memory (from prd-extractor, partial: modules/nfrs/constraints only).
+- Print: `  Extracted {F} file_changes, {S} steps, {G} non_goals (spec) + {M} modules, {N} nfrs, {C} constraints (design) from {files}`
 
 If any files have `detected_role: plan`:
 - **Read**: `lib/spec-extractor.md` for steps extraction only (skip file_changes section).
