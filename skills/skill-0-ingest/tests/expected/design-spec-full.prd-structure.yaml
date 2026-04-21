@@ -2,8 +2,10 @@
 # Verifies prd-extractor's role=design-spec routing.
 
 prd_structure:
+  source_type: "ingested"
   source_files:
     - "tests/fixtures/design-spec/design-spec-full.md"
+  source_role: "design-spec"
 
   modules:
     - id: MOD-01

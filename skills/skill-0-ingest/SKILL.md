@@ -30,7 +30,7 @@ Three YAML files written to `{plans_dir}/{date}-*.yaml`:
 
 | File | Produced when | Consumed by |
 |------|--------------|-------------|
-| `{date}-prd-structure.yaml` | Any `prd`, `plan`, or `user-stories` MD found | skill-3-task-gen |
+| `{date}-prd-structure.yaml` | Any `prd`, `plan`, `user-stories`, or `design-spec` MD found | skill-3-task-gen |
 | `{date}-gap-analysis.yaml` | Any `gap` MD found | skill-3-task-gen |
 | `{date}-task-hints.yaml` | Any `design-spec` or `plan` MD found | skill-3-task-gen (optional) |
 

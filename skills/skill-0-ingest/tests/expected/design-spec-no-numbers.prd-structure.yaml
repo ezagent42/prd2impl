@@ -2,8 +2,10 @@
 # Verifies prd-extractor works with unnumbered headings (uses slug form for refs).
 
 prd_structure:
+  source_type: "ingested"
   source_files:
     - "tests/fixtures/design-spec/design-spec-no-numbers.md"
+  source_role: "design-spec"
 
   modules:
     - id: MOD-01

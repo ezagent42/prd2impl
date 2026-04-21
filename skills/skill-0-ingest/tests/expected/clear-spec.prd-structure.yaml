@@ -2,8 +2,10 @@
 # Verifies design-spec's NEW prd-structure output (previously this fixture only produced task-hints.yaml).
 
 prd_structure:
+  source_type: "ingested"
   source_files:
     - "tests/fixtures/role-detection/clear-design-spec.md"
+  source_role: "design-spec"
 
   modules:
     - id: MOD-01

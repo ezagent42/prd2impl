@@ -126,12 +126,12 @@ For each:
 prd_structure:
   source_type: "ingested"
   source_files: ["{md_path}"]
-  source_role: "prd"    # prd | plan | user-stories
+  source_role: "prd"    # prd | plan | user-stories | design-spec
 
-  modules: [...]         # populated for prd + plan; empty for user-stories
-  user_stories: [...]    # populated for prd + user-stories; empty for plan
-  nfrs: [...]            # populated for prd only
-  constraints: [...]     # populated for prd + plan
+  modules: [...]         # populated for prd + plan + design-spec; empty for user-stories
+  user_stories: [...]    # populated for prd + user-stories; empty for plan / design-spec
+  nfrs: [...]            # populated for prd + design-spec
+  constraints: [...]     # populated for prd + plan + design-spec
   external_deps: [...]   # populated for prd only
 ```
 
@@ -195,7 +195,11 @@ and do not map to any prd-structure field.
 
 ### Extracting modules
 
-**Case 1: §Design section has `###` sub-headings.**
+**Sub-heading scoping**: a `###` sub-heading "belongs to" the §Design section only if
+it appears between the §Design `##` heading and the next `##` heading. Stop scanning at
+the next `##` boundary.
+
+**Case 1: §Design section has `###` sub-headings (scoped as above).**
 
 Each sub-heading becomes one module:
 
@@ -255,7 +259,7 @@ Each bullet under §Known Limitations:
 ```yaml
 - id: CON-{N:02d}
   type: <auto-detect>
-  description: <bullet text verbatim>
+  description: <bullet text; if bullet is "X: Y" or "X（Y）", the X part (parenthetical/colon-suffix stripped when rationale is extracted from it); else full bullet text>
   rationale: <if bullet is "X: Y" or "X（Y）", the Y part; else same as description>
   prd_ref: "§8"   # or slug
 ```

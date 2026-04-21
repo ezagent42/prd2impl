@@ -2,8 +2,10 @@
 # Verifies prd-extractor is order-independent (same content, sections reshuffled).
 
 prd_structure:
+  source_type: "ingested"
   source_files:
     - "tests/fixtures/design-spec/design-spec-unordered.md"
+  source_role: "design-spec"
 
   modules:
     - id: MOD-01
