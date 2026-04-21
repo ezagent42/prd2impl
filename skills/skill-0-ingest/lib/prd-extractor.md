@@ -13,7 +13,7 @@ For `plan` and `user-stories` roles it applies a subset of that logic.
 | `prd` | modules, user_stories, nfrs, constraints, external_deps | — (full skill-1 logic) |
 | `plan` | modules (as phases/milestones), constraints only | user_stories, nfrs, external_deps |
 | `user-stories` | user_stories only | modules, nfrs, constraints, external_deps |
-| `design-spec` | modules (partial), nfrs, constraints | user_stories, external_deps |
+| `design-spec` | modules (partial), nfrs, constraints, external_deps | user_stories |
 
 ## Extraction: role=prd (full)
 
@@ -132,7 +132,7 @@ prd_structure:
   user_stories: [...]    # populated for prd + user-stories; empty for plan / design-spec
   nfrs: [...]            # populated for prd + design-spec
   constraints: [...]     # populated for prd + plan + design-spec
-  external_deps: [...]   # populated for prd only
+  external_deps: [...]   # populated for prd + design-spec (from §Dependencies section)
 ```
 
 ## Handling multiple prd/plan/user-stories MDs
@@ -284,6 +284,72 @@ by more text — no split; description == rationale == whole bullet.
 - contains "tech", "tool", "framework", "library" → `technology`
 - contains "schedule", "deadline", "date", "deliver" → `schedule`
 - else → `general`
+
+### Extracting external_deps
+
+Locate a section heading matching (case-insensitive, match by heading text — NOT by number):
+
+- `Dependencies` / `Dependency`
+- `依赖` / `外部依赖`
+- Numbered prefixes like `## 8. Dependencies`, `## N. 依赖` — strip the leading number+dot before matching keywords.
+
+If no matching heading is found → `external_deps: []` (not a warning — dep-less specs are valid).
+
+Inside the matching section, detect one of two sub-formats:
+
+**Format A — markdown table**:
+
+```markdown
+## 8. Dependencies
+| Package | Version | Purpose |
+|---------|---------|---------|
+| react-markdown | ^9.0.1 | core renderer |
+```
+
+Parse columns (flexible ordering, case-insensitive headers):
+- `Package` / `Name` / `Library` → `name`
+- `Version` / `Ver` → `version`
+- `Purpose` / `Description` / `Why` → `purpose`
+
+For each data row emit:
+
+```yaml
+- id: DEP-NN            # sequential starting DEP-01
+  name: "<name>"         # strip backticks, trim whitespace
+  version: "<version>"
+  purpose: "<purpose>"
+  source_anchor: "<heading text>"
+```
+
+**Format B — bullet list**:
+
+```markdown
+## 8. Dependencies
+- `react-markdown@^9.0.1` — core markdown renderer
+- `remark-gfm@^4` — GFM extensions
+```
+
+For each bullet:
+- Strip leading `- ` and any surrounding whitespace.
+- Extract the leading backtick-wrapped token. Split on `@` — left side is `name`, right side is `version`.
+- Text after the first ` — ` (em-dash + space) or `: ` becomes `purpose`.
+- If no `@` in the token: `version: null`.
+- If no em-dash / colon separator: `purpose: null`.
+
+### Numbering
+
+IDs are sequential across the section: DEP-01, DEP-02, ... If multiple Dependencies sections somehow exist (shouldn't, but defensive): continue numbering across them without reset.
+
+### Output
+
+Splice the emitted `external_deps` list into the in-progress `prd_structure` object alongside the existing `modules` / `nfrs` / `constraints` additions.
+
+### Graceful degradation (external_deps)
+
+- No §Dependencies section → `external_deps: []`, no warning.
+- §Dependencies exists but has no table and no bullets → `external_deps: []`, warn `§Dependencies section in {file} is empty`.
+- A table row with missing Package cell → skip that row, warn `§Dependencies table row {N} missing Package; skipped`.
+- A bullet without a backtick-wrapped token → skip that bullet, warn similarly.
 
 ### user_stories handling
 
