@@ -15,6 +15,7 @@ Convert multiple human-authored Markdown files into the YAML artifacts that `ski
 
 - User runs `/ingest-docs [file1.md] [file2.md] ...`
 - User provides `--tag role=path` overrides alongside file paths
+- User provides `--synthesize-user-stories` flag (opt-in LLM synthesis of user_stories for design-spec role — see §Inputs)
 - User says "ingest my docs", "read my markdown files", "import gap analysis and design spec"
 
 ## Inputs
@@ -23,6 +24,8 @@ Convert multiple human-authored Markdown files into the YAML artifacts that `ski
 - **Optional**: `--tag <role>=<path>` overrides (force a role instead of auto-detecting)
   - Valid roles: `gap`, `design-spec`, `plan`, `prd`, `user-stories`
   - Example: `--tag spec=a.md --tag gap=b.md`
+
+- **Optional**: `--synthesize-user-stories` — opt-in flag. When passed and any input file is classified as `role=design-spec`, run the LLM synthesis pass described in `lib/prd-extractor.md §user_stories LLM synthesis`. Default: off, which preserves existing `user_stories: []` behavior for design-spec.
 
 ## Outputs
 
@@ -172,6 +175,30 @@ Overwriting docs/plans/m2/2026-04-20-prd-structure.yaml (12 → 13 modules, 47 �
 Overwriting docs/plans/m2/2026-04-20-gap-analysis.yaml (17 → 18 gaps, 6 → 7 P0)
 Note: tasks.yaml for this plans_dir already exists and may now be inconsistent. Re-run /task-gen to regenerate.
 ```
+
+### 4.1b Populate extraction metadata (design-spec only)
+
+Before writing `prd-structure.yaml`, if `prd_structure.source_role == "design-spec"`, add an `extraction` key recording which fields came from which code path:
+
+```yaml
+extraction:
+  regex_fields: [modules, nfrs, constraints, external_deps]
+  llm_fields: []            # default
+```
+
+If the `--synthesize-user-stories` flag was passed AND the LLM synthesis actually produced ≥1 valid user story: append `user_stories` to `llm_fields`:
+
+```yaml
+extraction:
+  regex_fields: [modules, nfrs, constraints, external_deps]
+  llm_fields: [user_stories]
+```
+
+If the flag was passed but the LLM pass produced 0 valid stories (trigger fired but personas all failed verbatim check, or LLM call failed), keep `llm_fields: []` — downstream treats the output uniformly whether the flag was passed or not.
+
+For `source_role` in {prd, plan, user-stories}: do NOT add the `extraction` key — all their fields come from regex, no provenance tracking needed.
+
+Downstream skills (skill-3-task-gen, skill-12-contract-check) read `prd_structure.extraction` to decide where to apply fuzzy matching vs. strict validation.
 
 ### 4.2 Write files
 

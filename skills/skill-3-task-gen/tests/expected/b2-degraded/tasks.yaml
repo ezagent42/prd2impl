@@ -1,0 +1,19 @@
+tasks:
+  - id: T1S.1
+    name: "Build feature A as a pure module with unit tests"
+    description: "Build feature A as a pure module with unit tests"
+    line: shared
+    type: green
+    traceability: task-hints-only
+    synthesized_module_id: MOD-01
+    touches_files: ["src/feature/A.ts"]
+    depends_on: []
+  - id: T1S.2
+    name: "Wire feature A into B; regression tests"
+    description: "Wire feature A into B; regression tests"
+    line: shared
+    type: green
+    traceability: task-hints-only
+    synthesized_module_id: MOD-02
+    touches_files: ["src/feature/B.ts"]
+    depends_on: [T1S.1]

@@ -19,9 +19,9 @@ Convert gap analysis results into a structured task list with dependency graph, 
 
 ## Input
 
-- **Required**: `{plans_dir}/*-gap-analysis.yaml` (output from skill-2 or skill-0)
-- **Required**: `{plans_dir}/*-prd-structure.yaml` (output from skill-1 or skill-0)
-- **Optional**: `{plans_dir}/*-task-hints.yaml` (output from skill-0 only — see §Step 2.5)
+- **Required (or B2 fallback)**: `{plans_dir}/*-gap-analysis.yaml` (output from skill-2 or skill-0) — see §Step 1.5 B2 Degradation
+- **Required (or B2 fallback)**: `{plans_dir}/*-prd-structure.yaml` (output from skill-1 or skill-0) — see §Step 1.5 B2 Degradation
+- **Optional (REQUIRED for B2 fallback mode)**: `{plans_dir}/*-task-hints.yaml` (output from skill-0 only — see §Step 2.5)
 - **Optional**: `docs/plans/project.yaml` (team configuration; always at project root)
 - **Optional**: Existing `{plans_dir}/tasks.yaml` (for incremental updates — see docs/superpowers/specs/2026-04-20-plans-dir-scoping-design.md §8 Limitation 6 for status)
 
@@ -31,10 +31,84 @@ Convert gap analysis results into a structured task list with dependency graph, 
 
 ### Step 1: Load Gap Analysis
 
-1. Find the most recent `gap-analysis.yaml` and `prd-structure.yaml`
+1. Find the most recent `gap-analysis.yaml` and `prd-structure.yaml`. **Do NOT error on miss** — if either file is absent, remember which is missing and proceed to §Step 1.5 to evaluate B2 degradation before emitting any error.
 2. Also check for the most recent `task-hints.yaml` — if found, load it (see §Step 2.5)
-3. Group gaps by module
+3. Group gaps by module (skip if `gap_analysis` was synthesized in §Step 1.5)
 4. Sort by estimated effort and dependency chain
+
+### Step 1.5: B2 Degradation — task-hints-only mode
+
+skill-3 can operate without `prd-structure.yaml` and/or `gap-analysis.yaml` provided `task-hints.yaml` is present and has a non-empty `implementation_steps` list. This unblocks the design-spec workflow where no gap-scan has run.
+
+#### Trigger
+
+At the end of Step 1 (Load Gap Analysis), check what was loaded:
+
+- If `gap-analysis.yaml` was NOT found AND `task-hints.yaml` WAS found: synthesize `gap_analysis = { gaps: [] }` in memory.
+- If `prd-structure.yaml` was NOT found AND `task-hints.yaml` WAS found: synthesize a skeleton `prd_structure` in memory (see §Skeleton synthesis below).
+- If `task-hints.yaml` was NOT found OR `implementation_steps` is empty: do NOT synthesize — fall through to the original hard-error behavior of Step 1.
+
+The synthesized structures are **never written to disk** — they exist only for the duration of this `/task-gen` invocation.
+
+#### Skeleton synthesis
+
+```yaml
+prd_structure:
+  source_type: "synthesized-from-task-hints"
+  source_role: "design-spec"
+  modules:
+    # One module per implementation_step entry
+    - id: MOD-01
+      name: "<step.description truncated to 60 chars>"
+      description: "<step.description (full)>"
+      prd_sections: []
+      sub_modules:
+        # One sub_module per file in step.touches_files
+        - id: MOD-01a
+          name: "<file basename>"
+          description: "<file path>"
+  user_stories: []
+  nfrs: []
+  constraints: []
+  external_deps: []
+```
+
+Sequential numbering: MOD-01, MOD-02, ... matching the step numbers. Sub-module suffix: MOD-01a, MOD-01b, ... per file within a step.
+
+#### Task output marker
+
+Every task emitted under B2 degradation MUST include:
+
+```yaml
+tasks:
+  - id: T<phase><line>.<seq>
+    ...
+    traceability: task-hints-only      # NEW field — absent in normal mode
+    synthesized_module_id: MOD-NN      # NEW field — links to skeleton module
+```
+
+Downstream skills (contract-check, retro) key off `traceability: task-hints-only` to skip checks that need real `user_stories` / `constraints` / `external_deps`.
+
+#### User-facing warning
+
+Before writing `tasks.yaml`, print:
+
+```
+─────────────────────────────────────────────────────
+B2 degradation mode active
+─────────────────────────────────────────────────────
+Missing: {list of absent required files}
+Synthesized {N} skeleton modules (MOD-01..MOD-{N}) from implementation_steps.
+user_stories / nfrs / constraints / external_deps are empty — downstream
+skills (contract-check, retro) will skip checks that depend on these fields.
+Re-run /ingest-docs on a richer source document to upgrade.
+─────────────────────────────────────────────────────
+```
+
+#### What does NOT change
+
+- If all three input files are present → zero behavior change.
+- Synthesized structures are NEVER persisted. Running `/ingest-docs` afterward produces real files; this skeleton was only scaffolding for this `/task-gen` invocation.
 
 ### Step 2: Generate Tasks
 

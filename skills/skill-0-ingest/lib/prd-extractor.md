@@ -13,7 +13,7 @@ For `plan` and `user-stories` roles it applies a subset of that logic.
 | `prd` | modules, user_stories, nfrs, constraints, external_deps | — (full skill-1 logic) |
 | `plan` | modules (as phases/milestones), constraints only | user_stories, nfrs, external_deps |
 | `user-stories` | user_stories only | modules, nfrs, constraints, external_deps |
-| `design-spec` | modules (partial), nfrs, constraints | user_stories, external_deps |
+| `design-spec` | modules (partial), nfrs, constraints, external_deps | user_stories |
 
 ## Extraction: role=prd (full)
 
@@ -132,7 +132,7 @@ prd_structure:
   user_stories: [...]    # populated for prd + user-stories; empty for plan / design-spec
   nfrs: [...]            # populated for prd + design-spec
   constraints: [...]     # populated for prd + plan + design-spec
-  external_deps: [...]   # populated for prd only
+  external_deps: [...]   # populated for prd + design-spec (from §Dependencies section)
 ```
 
 ## Handling multiple prd/plan/user-stories MDs
@@ -285,10 +285,156 @@ by more text — no split; description == rationale == whole bullet.
 - contains "schedule", "deadline", "date", "deliver" → `schedule`
 - else → `general`
 
+### Extracting external_deps
+
+Locate a section heading matching (case-insensitive, match by heading text — NOT by number):
+
+- `Dependencies` / `Dependency`
+- `依赖` / `外部依赖`
+- Numbered prefixes like `## 8. Dependencies`, `## N. 依赖` — strip the leading number+dot before matching keywords.
+
+If no matching heading is found → `external_deps: []` (not a warning — dep-less specs are valid).
+
+Inside the matching section, detect one of two sub-formats:
+
+**Format A — markdown table**:
+
+```markdown
+## 8. Dependencies
+| Package | Version | Purpose |
+|---------|---------|---------|
+| react-markdown | ^9.0.1 | core renderer |
+```
+
+Parse columns (flexible ordering, case-insensitive headers):
+- `Package` / `Name` / `Library` → `name`
+- `Version` / `Ver` → `version`
+- `Purpose` / `Description` / `Why` → `purpose`
+
+For each data row emit (the `id` field is **mandatory** — must be `DEP-NN` sequential starting at `DEP-01`; do NOT omit it or set it to null):
+
+```yaml
+- id: DEP-01             # MANDATORY — DEP-NN sequential, NEVER null/omitted
+  name: "<name>"         # strip backticks, trim whitespace
+  version: "<version>"
+  purpose: "<purpose>"
+  source_anchor: "<heading text>"
+```
+
+Validation observed during initial release: an LLM following this template skipped the `id` field. The "MANDATORY" wording above + the concrete `DEP-01` example (instead of placeholder `DEP-NN`) close that gap.
+
+**Format B — bullet list**:
+
+```markdown
+## 8. Dependencies
+- `react-markdown@^9.0.1` — core markdown renderer
+- `remark-gfm@^4` — GFM extensions
+```
+
+For each bullet:
+- Strip leading `- ` and any surrounding whitespace.
+- Extract the leading backtick-wrapped token. Split on `@` — left side is `name`, right side is `version`.
+- Text after the first ` — ` (em-dash + space) or `: ` becomes `purpose`.
+- If no `@` in the token: `version: null`.
+- If no em-dash / colon separator: `purpose: null`.
+
+### Numbering
+
+IDs are sequential across the section: DEP-01, DEP-02, ... If multiple Dependencies sections somehow exist (shouldn't, but defensive): continue numbering across them without reset.
+
+### Output
+
+Splice the emitted `external_deps` list into the in-progress `prd_structure` object alongside the existing `modules` / `nfrs` / `constraints` additions.
+
+### Graceful degradation (external_deps)
+
+- No §Dependencies section → `external_deps: []`, no warning.
+- §Dependencies exists but has no table and no bullets → `external_deps: []`, warn `§Dependencies section in {file} is empty`.
+- A table row with missing Package cell → skip that row, warn `§Dependencies table row {N} missing Package; skipped`.
+- A bullet without a backtick-wrapped token → skip that bullet, warn similarly.
+
 ### user_stories handling
 
-**Intentionally not extracted.** design-spec focuses on "what/how", not "who/why".
-Output `user_stories: []` (empty array) always for design-spec role.
+**Default: not extracted.** design-spec focuses on "what/how", not "who/why".
+Output `user_stories: []` (empty array) for design-spec role **unless the
+`--synthesize-user-stories` flag was passed to `/ingest-docs`**.
+
+### user_stories LLM synthesis (role=design-spec, opt-in)
+
+Gated on the `--synthesize-user-stories` flag registered in skill-0 SKILL.md §Inputs. When the flag is absent: skip this entire subsection, output `user_stories: []`.
+
+#### Trigger (when flag is set)
+
+Run the LLM pass IF AND ONLY IF:
+1. The `--synthesize-user-stories` flag was set, AND
+2. A section heading matching `Scope` / `范围` was found, AND
+3. Regex-extracted `user_stories` is empty (always true for design-spec).
+
+If flag set but §Scope absent → warn `--synthesize-user-stories set but §Scope not found in {file}; user_stories remains []`. Do NOT make the LLM call.
+
+#### Extract §Scope content
+
+Capture the §Scope section from the first heading line through the next `##`-level heading (exclusive). This is the input to the LLM.
+
+#### LLM prompt
+
+**Execution model**: the synthesis runs **inline** in the agent currently following this skill. The agent IS the LLM — perform the synthesis using your own context. Do NOT spawn a subprocess, do NOT import the `anthropic` SDK, do NOT make an external API call. The "model: claude-sonnet-4-6" annotation below is documentary (it identifies which model the skill was designed against); it does NOT instruct you to swap to a different model or initiate a fresh API session.
+
+Construct the prompt mentally, then write the result directly into the in-progress `prd_structure.user_stories` list:
+
+```
+System: You extract user stories from design spec Scope sections. Output YAML only.
+
+User: Extract user stories from this design spec's Scope section.
+
+Rules:
+- Produce one user story per surface/row. Max 6 stories.
+- `persona` MUST be a string that appears verbatim in the Scope text.
+- `action` + `goal` describe what the persona does on that surface, using the
+  spec's own language. Do NOT invent features not hinted at in the Scope.
+- `acceptance_criteria` MUST be []. Do not hallucinate ACs.
+- Return YAML in this exact shape:
+
+user_stories:
+  - id: US-NN
+    module: MOD-??          # pick from: {modules_list}
+    persona: "..."
+    action: "..."
+    goal: "..."
+    acceptance_criteria: []
+    prd_ref: "§Scope row N"
+    source: synthesized
+
+Scope section:
+---
+{scope_text}
+---
+
+Modules available: {modules_list}
+```
+
+Substitute before the call:
+- `{scope_text}` = the extracted §Scope block.
+- `{modules_list}` = comma-separated list of module IDs from the in-progress `prd_structure.modules`. If the modules list is empty, pass `MOD-01` as a fallback AND emit one synthetic module `MOD-01 "Scope"` so stories have a valid anchor.
+
+#### Parse LLM output
+
+1. Parse the returned YAML (expect a top-level `user_stories:` key).
+2. Validate each story:
+   - `persona` must be a verbatim substring of the §Scope text (literal check). If not found verbatim → drop that story; log warning `LLM persona {persona} not verbatim in §Scope; story dropped`.
+   - `acceptance_criteria` must be `[]` (empty list). If not, force to `[]` and warn.
+   - Sequential re-numbering of `id` after validation.
+3. Splice the validated list into the in-progress `prd_structure.user_stories`.
+
+#### Error handling
+
+- LLM call fails (timeout, quota) → `user_stories: []`, emit warning `LLM user_stories synthesis skipped: {reason}. Re-run /ingest-docs to retry.`
+- LLM output not valid YAML → `user_stories: []`, emit warning + log the raw output for debugging (truncate to 1000 chars).
+- No personas pass the verbatim-substring check → `user_stories: []`, warn `LLM produced 0 stories with valid personas; check Scope format`.
+
+#### Cost ceiling
+
+Maximum 1 LLM call per `/ingest-docs` invocation per design-spec file. If multiple design-spec files are ingested in the same run, the call fires once per file (cap still "1 per file"). Cache §Scope text in memory so no repeated extraction.
 
 ### Graceful degradation
 
