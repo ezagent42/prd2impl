@@ -295,3 +295,44 @@ warnings:
 - **Too small**: If a task is <30 min of work with no interesting design → merge with related task
 - **Sweet spot**: 1-4 hours of focused work, 1-2 deliverables, clear verification
 - **Red tasks**: Can be larger (design docs, compliance reviews) since they're human-paced
+
+## Pipeline Integration Test Rule
+
+When task decomposition splits a producer/consumer pair across separate tasks (e.g. one task implements a data emitter, a sibling task implements the consumer that filters/routes/displays it), the decomposition leaves a **connector seam**: each unit-tests cleanly in isolation, but a missing field or contract mismatch at the seam makes the whole pipeline silently inert in production.
+
+### When this applies
+
+Detect connector seams by these signals during task generation:
+
+- Two or more tasks share a `module` but cover different stages of a data flow (one writes a field, another reads it)
+- A task's `gap_ref` says "evaluate per-tenant" / "filter by X" / "route to Y" while a sibling task says "produce records of type X" — the producer must populate the field the consumer keys on
+- A task's `deliverables` produce records consumed by another task's `deliverables` (cross-task data dependency, not just file-import dependency)
+
+### Required additional task
+
+For every detected seam, append an integration task:
+
+```yaml
+- id: T<phase><line>.<seq>
+  name: "Integration: {producer task} → {consumer task} pipeline"
+  type: green
+  module: <shared module>
+  description: "End-to-end test that exercises the full pipeline from {producer} through {consumer}, asserting the observable behavior at the consumer end (not just that each unit's tests pass)."
+  depends_on: [<producer task id>, <consumer task id>]
+  deliverables:
+    - path: "tests/integration/test_<feature>_pipeline.py"
+      type: test
+  verification: "Test fails if producer omits the connector field OR consumer ignores it OR the wire format drifts."
+  estimated_effort: small  # usually 30-60min
+  meta:
+    connector_seam: true
+    connects: [<producer task id>, <consumer task id>]
+```
+
+### Why this matters
+
+M3 retro evidence (T2S.5 AlertEngine): producer task built `FiredAlert` records, consumer task added per-tenant push filter. Both tasks' unit tests passed. **The producer never set `tenant_id` on the record** — so the consumer's filter always short-circuited and the feature was dead in production despite 100% green tests. Reviewer caught it; integration test would have caught it earlier and cheaper.
+
+### Heuristic budget
+
+Add at most one integration task per connector seam. Do not generate integration tasks for trivial seams where the producer and consumer share a single file and the unit tests already exercise the full path. The goal is catching cross-task data drift, not test inflation.
