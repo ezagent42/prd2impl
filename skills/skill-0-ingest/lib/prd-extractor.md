@@ -311,15 +311,17 @@ Parse columns (flexible ordering, case-insensitive headers):
 - `Version` / `Ver` → `version`
 - `Purpose` / `Description` / `Why` → `purpose`
 
-For each data row emit:
+For each data row emit (the `id` field is **mandatory** — must be `DEP-NN` sequential starting at `DEP-01`; do NOT omit it or set it to null):
 
 ```yaml
-- id: DEP-NN            # sequential starting DEP-01
+- id: DEP-01             # MANDATORY — DEP-NN sequential, NEVER null/omitted
   name: "<name>"         # strip backticks, trim whitespace
   version: "<version>"
   purpose: "<purpose>"
   source_anchor: "<heading text>"
 ```
+
+Validation observed during initial release: an LLM following this template skipped the `id` field. The "MANDATORY" wording above + the concrete `DEP-01` example (instead of placeholder `DEP-NN`) close that gap.
 
 **Format B — bullet list**:
 
@@ -376,7 +378,9 @@ Capture the §Scope section from the first heading line through the next `##`-le
 
 #### LLM prompt
 
-Invoke the LLM (model: `claude-sonnet-4-6`) with:
+**Execution model**: the synthesis runs **inline** in the agent currently following this skill. The agent IS the LLM — perform the synthesis using your own context. Do NOT spawn a subprocess, do NOT import the `anthropic` SDK, do NOT make an external API call. The "model: claude-sonnet-4-6" annotation below is documentary (it identifies which model the skill was designed against); it does NOT instruct you to swap to a different model or initiate a fresh API session.
+
+Construct the prompt mentally, then write the result directly into the in-progress `prd_structure.user_stories` list:
 
 ```
 System: You extract user stories from design spec Scope sections. Output YAML only.
