@@ -1,7 +1,7 @@
 {
   "name": "prd2impl",
   "description": "PRD-to-Implementation pipeline: 14-skill workflow from requirement analysis to task execution, progress tracking, and milestone verification. Per-scope plans_dir isolation for parallel milestones. design-spec → prd-structure.yaml ingest bridge for superpowers integration.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "h2os.cloud"
   },

@@ -23,7 +23,32 @@ Orchestrate the entire task queue autonomously. Pick order, pick parallelism, au
 
 ## Preflight
 
-Before the loop starts, confirm scope with a **one-shot summary** (not a question):
+### 0. Parallel-line scan (always, before any other preflight step)
+
+Before building the work queue, detect work that landed on the branch since the last autorun. This catches the scenario where another orchestrator (human or another agent) shipped commits in parallel to the autorun's plan — common when you've been away from the repo for a while or when a human co-developer is co-writing the same milestone.
+
+Run:
+
+```bash
+LAST_AUTORUN_SHA=$(git log --grep='chore.*autorun' -1 --format=%H 2>/dev/null || git log --grep='/autorun' -1 --format=%H 2>/dev/null)
+if [ -n "$LAST_AUTORUN_SHA" ]; then
+  git log --oneline "$LAST_AUTORUN_SHA"..HEAD
+else
+  # First autorun on this branch — scope to recent activity instead
+  git log --oneline -20
+fi
+```
+
+Expected output classes:
+- **Empty** → no parallel-line drift, proceed to scope confirmation.
+- **Only your own commits** (matching the autorun signature in `task-status.md` session log) → proceed.
+- **Commits NOT in `task-status.md`** → STOP. List those commits and ask: *"Detected N parallel-line commits since last autorun: <list>. These may have changed contracts or schemas the queued tasks depend on. Reconcile (re-read tasks against new HEAD) or proceed anyway?"* Wait for explicit user choice; do NOT default to proceed.
+
+**Why mandatory**: parallel-line drift caught at autorun start costs 1 minute (a `git log` and a confirmation). Caught mid-batch it costs 30+ minutes (rework + reconcile + possibly re-running already-shipped tasks). M3 retro evidence: a parallel line added `ParticipantRole.TRIAGE` and `list_conversations_in_takeover_by()` while autorun was closing the M3 gate; cost ~30 min to detect + ~30 min to reconcile (re-export shim + 3 contract-drift test fixes).
+
+### 1. Scope confirmation
+
+Then confirm scope with a **one-shot summary** (not a question):
 
 ```
 Autorun starting — level: {green|yellow|all}
@@ -31,6 +56,7 @@ Scope: {N} tasks in queue ({G} Green, {Y} Yellow, {R} Red)
 Will skip: {what's excluded based on level}
 Stop conditions: test failure after 3 retries, dependency cycle, explicit STOP commit marker
 Estimated parallelism: up to {K} concurrent worktrees
+Parallel-line: {clean | reconciled with N commits | proceeding anyway despite N undocumented commits}
 
 Starting in 10s. Type 'cancel' to abort.
 ```

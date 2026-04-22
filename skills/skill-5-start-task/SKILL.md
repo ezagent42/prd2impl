@@ -99,22 +99,26 @@ dev-loop plan/code/runner chain still works.
 #### Yellow Tasks (AI + human review)
 
 Modified workflow:
-1. Read PRD section and related references
-2. Read existing code in the area for style/pattern consistency
-3. Draft the deliverable(s)
-4. Set status to `review_pending` in task-status
-5. Output a **Review Checklist**:
+1. **Re-read the relevant contract section verbatim** (NOT a paraphrase). Quote it back at the top of your work product so the user can verify your starting point. This is mandatory for any task that touches a security boundary, an API contract, or any field listed in `prd_structure.constraints[]` or `external_deps[]`.
+2. Read PRD section and related references
+3. Read existing code in the area for style/pattern consistency
+4. Draft the deliverable(s)
+5. Set status to `review_pending` in task-status
+6. Output a **Review Checklist**:
    ```
    ## Review Checklist for {Task ID}
    - [ ] {Key point 1 to verify}
    - [ ] {Key point 2 to verify}
    - [ ] {Consistency with existing code}
    - [ ] {Domain accuracy}
+   - [ ] {Each contract clause from Step 1 honored — no lenient migration}
    ```
-6. **STOP — wait for user approval or rejection**
+7. **STOP — wait for user approval or rejection**
 
 On approval: commit + mark completed
 On rejection: note reason, revise, re-submit
+
+> **Anti-pattern: "lenient migration path"** — if you find yourself softening a contract clause (e.g. accepting requests without auth, returning a default instead of erroring) to avoid updating existing tests, **the contract wins**. Update the tests instead. The short-term cost of test rework is less than the long-term cost of a shipped security hole. M3 retro evidence: T1S.3 lenient WS-cookie fallback would have shipped an unauthenticated subscribe leak if reviewer hadn't caught it.
 
 #### Red Tasks (Human-driven)
 
