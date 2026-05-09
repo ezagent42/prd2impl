@@ -217,6 +217,9 @@ companion skill isn't installed, prd2impl falls back to a simpler path.
 | skill-8 batch-dispatch | `superpowers:dispatching-parallel-agents` | Parallel subagent launch with isolation | Sequential launch |
 | skill-10 smoke-test | `superpowers:requesting-code-review` + `verification-before-completion` | Independent milestone review + evidence-based GO/NO-GO | Automated-test-only gate |
 | skill-13 autorun (yellow/all) | `superpowers:requesting-code-review` | Independent review of Yellow drafts (replaces human STOP) | Yellow tasks fall back to STOP; autorun skips them rather than self-approving |
+| skill-13 autorun (yellow, two-stage) | `superpowers:subagent-driven-development` | Two-stage Yellow review pattern (spec-compliance, then code-quality) | Single-stage review (0.3.x) |
+| skill-11 retro (Step 6) | `superpowers:writing-skills` | Pressure-test framework patches against baseline failure scenarios | Patches emitted without pressure-test verification — manual confirmation required |
+| skill-5/skill-12 preflight | (prd2impl-internal AST) | Resolve every external symbol on real production class before code is written | Skipped with warning; cdcfdb2 bug class can ship |
 
 ### Companion plugin summary
 
