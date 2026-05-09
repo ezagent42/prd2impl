@@ -227,6 +227,32 @@ risk:
   recommendation: "Non-breaking changes. Update 8 files and re-run tests."
 ```
 
+#### Step 4.x: Registry-driven impact propagation (0.4.0+, dev-loop required)
+
+For each contract symbol that drifted, walk the registry to find
+every task whose `deliverables[].path` references the changed file:
+
+```
+/artifact-registry query --references {changed_file_path}
+```
+
+Emit `impacted_tasks: [...]` in the report. For each impacted task,
+flag whether it has an executed test-plan covering the drifted symbol;
+if not, recommend a re-test action:
+
+```yaml
+impacted_tasks:
+  - id: T4M.3
+    deliverables_touching_change:
+      - autoservice/pipeline_v2/main_agent/runner.py
+    has_executed_test_plan_covering_symbol: false
+    recommended_action: "Re-run /continue-task T4M.3 with new contract; or add explicit test for the changed signature."
+```
+
+**Graceful degradation**: when dev-loop missing, fall back to grep-based
+task lookup (the 0.3.x behavior). Note in the report that registry
+walking is unavailable.
+
 ### Step 5: Generate Report
 
 ```markdown

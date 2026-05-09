@@ -31,7 +31,28 @@ Display a comprehensive progress dashboard with statistics, visualizations, and 
 
 1. Read tasks from `tasks.yaml` or parse `task-status.md`
 2. Read execution plan for timeline targets
-3. Read `.artifacts/registry.json` for artifact counts (if available)
+3. Read artifact data via `dev-loop-skills:skill-6-artifact-registry` when available:
+
+   **Primary path** (dev-loop installed):
+   ```
+   /artifact-registry query --task-id {task_id} --status executed
+   ```
+   Consume the returned list as the task's artifact set. The registry
+   skill validates state transitions and link integrity; direct file
+   reads do not.
+
+   **Fallback** (dev-loop missing):
+   Fall back to direct read of `.artifacts/registry.json`. Note that
+   without the registry skill, the dashboard cannot detect coverage
+   gaps (see Step 2.x below).
+
+4. **Coverage-gap surfacing** (0.4.0+, when dev-loop installed):
+   For each task marked `completed` in tasks.yaml, query the registry
+   for any artifact with `status: executed` linked to that task. Tasks
+   marked done but with NO executed artifact are flagged in the
+   dashboard as `🔵 done — no executed test-plan` (a coverage gap, not
+   a failure). This is the metric the AutoService team has been
+   re-discovering manually after every milestone.
 
 ### Step 2: Compute Statistics
 

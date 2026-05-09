@@ -111,6 +111,21 @@ Identify recurring patterns:
 - How many tasks had to be redone?
 - How many had test failures?
 - How many contracts needed amendment?
+- **Tasks shipped without executed test-plan** (0.4.0+, dev-loop required):
+
+  ```
+  /artifact-registry query --status-not executed --linked-task-status done
+  ```
+
+  Each row is a coverage gap — a task that shipped without observed
+  test execution. Surface in retro report as
+  `## Coverage gaps (tasks done without executed test-plan): N (list)`.
+  This is the metric the AutoService team has been re-discovering
+  manually after every milestone (PV2 had 11+ post-gate fixes for
+  bugs that never had a real test).
+
+  **Graceful degradation**: when dev-loop missing, skip this signal
+  with a note in the retro report.
 
 ### Step 4: Generate Retrospective Report
 
