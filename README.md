@@ -37,6 +37,14 @@ prd2impl delegates testing and methodology to two optional companions (both avai
 /plugin install superpowers                 # brainstorming, TDD, debugging, code review
 ```
 
+### References
+
+- [`references/mock-policy.md`](references/mock-policy.md) — Mock policy
+  consumed by task-gen, start-task, continue-task, and batch-dispatch.
+  Defines what may / must-not be mocked and the contract-test pattern
+  that catches the cdcfdb2 bug class. Project-specific overrides can
+  live at `{plans_dir}/mock-policy.local.md`.
+
 ### Verify installation
 
 After installing, the following skills should appear in `/help`:

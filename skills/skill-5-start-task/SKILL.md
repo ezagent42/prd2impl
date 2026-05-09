@@ -139,6 +139,15 @@ plan and runner. Division of labor:
 If `superpowers` is unavailable, proceed without TDD rhythm enforcement — the
 dev-loop plan/code/runner chain still works.
 
+**Mock discipline (0.4.0+)**: when writing tests under
+`dev-loop-skills:skill-3-test-code-writer` (or manually if dev-loop
+missing), follow `references/mock-policy.md`:
+- `MagicMock()` without `spec=` is FORBIDDEN for production classes.
+- Hand-rolled `_FakeX` classes require a paired contract test
+  (template at `skills/skill-12-contract-check/references/ast-walk-template.md`).
+- Modules in the same Python package as the test must NOT be mocked —
+  they're the integration surface this task is coordinating around.
+
 #### Yellow Tasks (AI + human review)
 
 Modified workflow:
