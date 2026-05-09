@@ -30,6 +30,34 @@ Run milestone gate verification: check task completion, run automated tests, ver
 
 > **Path resolution**: Before constructing any read path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. `.artifacts/` paths are NOT scoped — they remain shared across plans_dir (see design spec §8 Limitation 1).
 
+### Step 0: Layer-3 drift gate (0.4.0+, when dev-loop-skills installed)
+
+`dev-loop-skills:skill-0-project-builder` maintains a
+`baseline_commit` frontmatter on the project's "Skill 1" knowledge
+file plus a `self-update.sh --check` script returning drift count
+(new top-level modules, renamed dirs, etc. since the last bootstrap).
+
+Before running any milestone test verification, check it:
+
+```
+/project-builder self-update --check
+```
+
+**Gate rule**:
+- `drift_count > 50` (configurable via `{plans_dir}/project.yaml::drift_threshold`)
+  → emit a STAGED warning prompting user to run `/bootstrap` re-baseline
+  before gate close. NOT an automatic NO-GO — drift can be intentional.
+- `drift_count <= 50` → proceed silently.
+
+**Why**: a stale module map silently passes milestone gates against
+imagined code structure. PV2 shipped `pipeline_v2/kb_mcp/` because
+the planning step didn't know `cc_pool.py:691` already auto-injects
+an MCP server. A re-baseline before PV2 task-gen would have surfaced
+the duplication.
+
+**Graceful degradation**: when `dev-loop-skills` missing, skip with a
+logged warning, gate proceeds.
+
 ### Step 1: Load Milestone Definition
 
 1. Find the milestone in execution-plan.yaml
