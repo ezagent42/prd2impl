@@ -30,6 +30,34 @@ Run milestone gate verification: check task completion, run automated tests, ver
 
 > **Path resolution**: Before constructing any read path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory. `.artifacts/` paths are NOT scoped — they remain shared across plans_dir (see design spec §8 Limitation 1).
 
+### Step 0: Layer-3 drift gate (0.4.0+, when dev-loop-skills installed)
+
+`dev-loop-skills:skill-0-project-builder` maintains a
+`baseline_commit` frontmatter on the project's "Skill 1" knowledge
+file plus a `self-update.sh --check` script returning drift count
+(new top-level modules, renamed dirs, etc. since the last bootstrap).
+
+Before running any milestone test verification, check it:
+
+```
+/project-builder self-update --check
+```
+
+**Gate rule**:
+- `drift_count > 50` (configurable via `{plans_dir}/project.yaml::drift_threshold`)
+  → emit a STAGED warning prompting user to run `/bootstrap` re-baseline
+  before gate close. NOT an automatic NO-GO — drift can be intentional.
+- `drift_count <= 50` → proceed silently.
+
+**Why**: a stale module map silently passes milestone gates against
+imagined code structure. PV2 shipped `pipeline_v2/kb_mcp/` because
+the planning step didn't know `cc_pool.py:691` already auto-injects
+an MCP server. A re-baseline before PV2 task-gen would have surfaced
+the duplication.
+
+**Graceful degradation**: when `dev-loop-skills` missing, skip with a
+logged warning, gate proceeds.
+
 ### Step 1: Load Milestone Definition
 
 1. Find the milestone in execution-plan.yaml
@@ -60,13 +88,45 @@ If any tasks are not complete, report and ask whether to proceed with partial ve
 
 ### Step 3: Automated Test Verification
 
-Run available automated checks:
+#### Primary path (when dev-loop-skills is installed)
+
+Invoke `dev-loop-skills:skill-4-test-runner` and consume its `e2e-report`
+artifact. Unlike raw `pytest`, the runner mechanically distinguishes new
+failures from regression failures and emits an evidence manifest the
+gate can read.
+
+1. Run the test runner scoped to this milestone's phase keyword:
+   ```
+   /test-runner --phase {phase_keyword} --emit-report
+   ```
+
+2. Read the resulting artifact at `.artifacts/e2e-report-{milestone}-*.yaml`.
+
+3. Parse three signal classes from the report:
+   - `new_failure: count` — failures in tests added during this milestone
+   - `regression_failure: count` — failures in tests that previously passed
+     (auto-escalates to NO-GO regardless of other counts)
+   - `pass_count`, `skip_count`
+
+4. **Gate rule**:
+   - any `regression_failure > 0` → NO-GO (do NOT downgrade to "1 env-blocked")
+   - `new_failure > 0` → STAGED (review with the user before declaring GO)
+   - all clean → continue to Step 4
+
+#### Fallback path (when dev-loop-skills is missing)
+
+Fall back to raw pytest with a logged warning. Without dev-loop, the
+gate cannot mechanically distinguish new vs regression failures —
+this is a structural weakness, not a stylistic preference.
 
 1. **Unit/Integration tests**:
    ```bash
+   echo "WARN: dev-loop-skills not detected; smoke-test cannot distinguish"
+   echo "      new vs regression failures. Install dev-loop-skills for"
+   echo "      milestone-grade reporting."
    pytest tests/ -k "{phase_keyword}" --tb=short
    ```
-   
+
 2. **Contract tests** (if applicable):
    ```bash
    pytest tests/contract/ --tb=short
@@ -84,6 +144,9 @@ Run available automated checks:
    ```bash
    make check  # or equivalent
    ```
+
+Treat any failure as ambiguous in the fallback path. Prompt the user
+to triage manually before declaring GO.
 
 ### Step 4: Artifact Completeness
 
@@ -125,6 +188,16 @@ Result: [ ] Auto-testable  [x] Manual verification needed
 Categorize each scenario:
 - **Auto-testable**: Run it and report result
 - **Manual**: Generate checklist for human verification
+
+#### Step 5.x: Regression list as NO-GO trigger
+
+If Step 3's `e2e-report` listed any `regression_failure` rows, copy
+each row into the gate report's `## Blocking failures` section
+verbatim. Do NOT downgrade these to "1 env-blocked, structurally
+identical to verified counterpart" — that footnote pattern is what
+the design spec §1 explicitly forbids. A regression failure in the
+e2e-report means a previously-passing test is now red; that is a
+NO-GO regardless of how the new tests perform.
 
 ### Step 6: Generate Gate Report
 

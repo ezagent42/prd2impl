@@ -81,6 +81,12 @@ Based on detected progress:
 3. Write test files to the project
 4. Report what tests were written
 
+**Mock discipline (0.4.0+)**: follow `references/mock-policy.md` —
+- `MagicMock()` without `spec=` is FORBIDDEN for production classes
+- Hand-rolled fakes require paired contract tests (template:
+  `skills/skill-12-contract-check/references/ast-walk-template.md`)
+- Same-package modules must NOT be mocked
+
 #### After test code → Implementation
 1. Read the test files to understand expected behavior
 2. Implement the business logic to make tests pass
@@ -180,6 +186,13 @@ diagnostic template):
    process feedback via `superpowers:receiving-code-review` before closing.
    On unavailable → skip and proceed (Yellow/Red tasks already have human
    review; Green tasks will still be caught at milestone smoke-test).
+
+   **For Yellow tasks**: use the two-stage review pattern defined in
+   `skill-13-autorun §Step 5` — Stage A spec-compliance, then Stage B
+   code-quality. Stage A catches the "added unrequested feature" class
+   (per AutoService PV2 dead-code phenomenon). Both stages share the
+   `requesting-code-review` infrastructure; record both verdicts in
+   the commit body.
 2. Update task status: `in_progress` → `completed` (🟩)
 3. Fill artifact links in task-status (eval-doc, test-plan, test-diff, e2e-report IDs)
 4. Commit: `task: {ID} → completed`

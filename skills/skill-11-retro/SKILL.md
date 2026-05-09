@@ -111,6 +111,21 @@ Identify recurring patterns:
 - How many tasks had to be redone?
 - How many had test failures?
 - How many contracts needed amendment?
+- **Tasks shipped without executed test-plan** (0.4.0+, dev-loop required):
+
+  ```
+  /artifact-registry query --status-not executed --linked-task-status done
+  ```
+
+  Each row is a coverage gap — a task that shipped without observed
+  test execution. Surface in retro report as
+  `## Coverage gaps (tasks done without executed test-plan): N (list)`.
+  This is the metric the AutoService team has been re-discovering
+  manually after every milestone (PV2 had 11+ post-gate fixes for
+  bugs that never had a real test).
+
+  **Graceful degradation**: when dev-loop missing, skip this signal
+  with a note in the retro report.
 
 ### Step 4: Generate Retrospective Report
 
@@ -166,6 +181,74 @@ Actual: Wed 04-15 13:00 - 18:30 (5.5 hours, +37%)
 2. Commit: `retro: M1 retrospective`
 3. Print summary to terminal
 4. Suggest updating execution plan if patterns warrant schedule changes
+
+### Step 6: Framework Learning Loop
+
+> **Why this exists**: M3 retro produced 13 numbered improvement
+> recommendations (R1–R13) in
+> `docs/plans/m3/prd2impl-retro-notes.md`. Most never propagated into
+> prd2impl skill templates. PV2 reproduced nearly identical failure
+> modes a sprint later. Step 6 closes the dead-end-report problem by
+> turning each suggestion into a concrete skill patch.
+
+#### Inputs
+
+- `improvement_suggestions:` block from Step 4 / Step 5 output
+- The current skill files at `skills/*/SKILL.md` in this plugin
+
+#### Procedure
+
+1. **Classify each suggestion by target skill.** Use these heuristics:
+
+   | Suggestion shape | Target skill |
+   |---|---|
+   | "yellow review missed contract X" | `skill-13-autorun/SKILL.md` yellow checklist |
+   | "task generated for tombstoned story" | `skills/using-prd2impl/SKILL.md` tombstone gate |
+   | "test passed but missed prod bug" | `references/mock-policy.md` or `skill-3-task-gen/SKILL.md` connector_seam |
+   | "dead code shipped per spec" | `skill-13-autorun/SKILL.md` two-stage yellow review |
+   | "subagent invented an API method name" | `skill-12-contract-check/SKILL.md` --preflight wiring |
+   | "estimate was N× off" | `skill-3-task-gen/SKILL.md` similarity_hint guidance |
+   | "operational default differs from code default" | `skill-3-task-gen/SKILL.md` env_var.class declaration rule |
+
+   For suggestions that don't match any heuristic, surface them in a
+   `## Unclassified` section of the patch directory's index. These
+   need maintainer judgment before they can become skill rules.
+
+2. **For each classified suggestion**, derive:
+   - **Baseline scenario** — a runnable description of the failure
+     (e.g. "Yellow task whose diff calls `pool.acquire_for_session`
+     which does not exist on real `CCPool`; current skill-13 review
+     approves it; expected after patch: review fails")
+   - **Proposed rule text** — concrete sentence(s) to insert into the
+     target SKILL.md
+   - **Insertion point** — section heading or line number where the
+     rule belongs
+
+3. **Invoke `superpowers:writing-skills`** with the baseline scenario,
+   proposed rule, and target file. The writing-skills skill
+   pressure-tests the rule against the baseline:
+   - Without rule → baseline fails (the bug ships)
+   - With rule → baseline passes (the bug is caught)
+   - If pressure test fails → revise the rule until it does
+
+4. **Emit one patch per suggestion** under
+   `{plans_dir}/framework-patches/{slug}.md` using
+   `templates/framework-patch.md` format.
+
+#### Output
+
+`{plans_dir}/framework-patches/` directory containing N patches, each
+ready for human review or auto-apply by a maintainer. Auto-apply is
+out of scope for 0.4.0 — patches are committed artifacts the
+maintainer copies into the prd2impl repo as a separate PR.
+
+#### Graceful degradation
+
+If `superpowers:writing-skills` is not installed, retro emits the
+markdown patch without the pressure-test step. The patch file
+documents that pressure testing was skipped — maintainer must
+manually verify the rule catches the baseline before merging into
+the skill.
 
 ## Limitations
 

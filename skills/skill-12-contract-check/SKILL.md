@@ -41,18 +41,54 @@ Detect changes in contract/interface files and analyze their impact on dependent
    - WebSocket message schemas
 3. If user specified a file, focus on that one
 
-### Step 2: Detect Changes
+### Step 2: Build signature dictionary via AST
 
-**Check git diff** for recent changes:
-```bash
-# Changes in contract files since last tag/milestone
-git diff {last_milestone_tag}..HEAD -- docs/contracts/ 
+For each contract-side file from Step 1, parse its AST to enumerate
+`{Module.Class.method: Signature}`. This replaces the 0.3.x diff-text
+parser, which could only see what changed in this run, not the
+absolute current state of the contract.
 
-# Changes in interface files
-git diff {last_milestone_tag}..HEAD -- "*.proto" "*.schema.json" "*protocol*.py" "*interface*.ts"
+```python
+import ast
+
+def enumerate_contract(path):
+    """Returns {qualified_name: signature_dict} for every public method in path."""
+    tree = ast.parse(open(path).read())
+    out = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            for item in node.body:
+                if isinstance(item, ast.FunctionDef) and not item.name.startswith('_'):
+                    qual = f"{path}::{node.name}.{item.name}"
+                    args = [a.arg for a in item.args.args]
+                    kwonly = [a.arg for a in item.args.kwonlyargs]
+                    out[qual] = {
+                        'positional': args,
+                        'keyword_only': kwonly,
+                        'has_varargs': item.args.vararg is not None,
+                        'has_varkw': item.args.kwarg is not None,
+                    }
+    return out
 ```
 
-**Parse changes**:
+Store the resulting dict as the **canonical contract snapshot** for
+this run. This snapshot answers "does this method exist on the real
+class right now" rather than "did this method appear in the git
+diff".
+
+For TypeScript / JS contracts, use a parallel `tree-sitter-typescript`
+walk; if unavailable, fall back to the 0.3.x grep-based extraction
+with a logged warning.
+
+**Also keep the diff view for change-summary output** (still useful in
+the report):
+```bash
+git diff {last_milestone_tag}..HEAD -- docs/contracts/ \
+  "*.proto" "*.schema.json" "*protocol*.py" "*interface*.ts"
+```
+Diff is consumed for the human-readable `diff_summary:` block, but
+gating decisions use the AST snapshot.
+
 ```yaml
 changes:
   - file: "docs/contracts/conversation-engine.md"
@@ -63,6 +99,7 @@ changes:
       changed_signatures: ["start_session: added 'metadata' param"]
       added_fields: ["Session.metadata: dict"]
     severity: medium  # breaking | medium | minor
+    contract_snapshot_qualifies: 14  # methods enumerated by AST
     
   - file: "docs/contracts/frontend-ws-schema.md"
     type: schema
@@ -72,6 +109,66 @@ changes:
       changed_events: ["message.new: added 'sentiment' field"]
     severity: minor
 ```
+
+### Step 2.5: Detect signature drift in consumer code
+
+For each consumer file found in Step 3, AST-walk it and find every
+`Call` node whose callee resolves (via local symbol table) to a
+tracked method:
+
+```python
+def find_calls(consumer_path, contract_snapshot):
+    """Yield (lineno, qualified_name, actual_signature) for every tracked call."""
+    tree = ast.parse(open(consumer_path).read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            target = resolve_callee(node, tree)  # via local symbol table
+            if target in contract_snapshot:
+                actual = {
+                    'positional_count': len(node.args),
+                    'keyword_names': [kw.arg for kw in node.keywords if kw.arg],
+                }
+                yield (node.lineno, target, actual)
+
+def signature_drift(actual, definition):
+    """Return list of mismatches between actual call and definition."""
+    drifts = []
+    if (actual['positional_count'] > len(definition['positional'])
+            and not definition['has_varargs']):
+        drifts.append(
+            f"too many positional args: {actual['positional_count']} > "
+            f"{len(definition['positional'])}"
+        )
+    for kw in actual['keyword_names']:
+        if (kw not in definition['positional']
+                and kw not in definition['keyword_only']
+                and not definition['has_varkw']):
+            drifts.append(f"unknown keyword: {kw}")
+    # The T4M.3 pattern: keyword-only arg passed positionally
+    for i, pos_name in enumerate(definition['positional'][:actual['positional_count']]):
+        if pos_name in definition['keyword_only']:
+            drifts.append(f"keyword-only arg '{pos_name}' passed positionally")
+    return drifts
+```
+
+Emit a `signature_drift` block in the report:
+
+```yaml
+signature_drift:
+  - file: autoservice/pipeline_v2/main_agent/runner.py
+    line: 142
+    target: autoservice.cc_pool.CCPool.acquire_for_session
+    issue: symbol does not exist on real class
+    available_methods: [acquire, acquire_sticky, acquire_async]
+  - file: autoservice/pipeline_v2/main_agent/runner.py
+    line: 218
+    target: autoservice.cc_pool.CCPool.session_query
+    issue: keyword-only arg 'tenant_id' passed positionally
+```
+
+This catches drift that already shipped — independent of git diff —
+the cdcfdb2 bug class. See `references/ast-walk-template.md` for a
+reusable contract-test template.
 
 ### Step 3: Impact Analysis
 
@@ -130,6 +227,32 @@ risk:
   recommendation: "Non-breaking changes. Update 8 files and re-run tests."
 ```
 
+#### Step 4.x: Registry-driven impact propagation (0.4.0+, dev-loop required)
+
+For each contract symbol that drifted, walk the registry to find
+every task whose `deliverables[].path` references the changed file:
+
+```
+/artifact-registry query --references {changed_file_path}
+```
+
+Emit `impacted_tasks: [...]` in the report. For each impacted task,
+flag whether it has an executed test-plan covering the drifted symbol;
+if not, recommend a re-test action:
+
+```yaml
+impacted_tasks:
+  - id: T4M.3
+    deliverables_touching_change:
+      - autoservice/pipeline_v2/main_agent/runner.py
+    has_executed_test_plan_covering_symbol: false
+    recommended_action: "Re-run /continue-task T4M.3 with new contract; or add explicit test for the changed signature."
+```
+
+**Graceful degradation**: when dev-loop missing, fall back to grep-based
+task lookup (the 0.3.x behavior). Note in the report that registry
+walking is unavailable.
+
 ### Step 5: Generate Report
 
 ```markdown
@@ -187,3 +310,72 @@ If yes, apply fixes and run tests. If tests pass, commit.
 - **Reactively**: When a test fails with "unexpected argument" or "missing field" errors
 - **On contract change**: After any edit to `docs/contracts/` files
 - **Cross-line sync**: When the other developer reports a contract change
+- **Pre-flight per task**: Automatically invoked from `skill-5-start-task` Step 4.5 for every Yellow task and any task with `must_call_unchanged`. See `--preflight` subcommand below.
+
+## Preflight subcommand: `/contract-check --preflight {task_id}`
+
+Invoked BEFORE writing code, by `skill-5-start-task` Step 4.5 for any
+task that satisfies one of:
+- `type: yellow` (always)
+- `must_call_unchanged: [...]` is non-empty
+- `affects_files` glob matches `**/*contract*` / `**/*protocol*`
+- `meta.connector_seam: true`
+
+### Inputs
+- `{task_id}` — looked up in `{plans_dir}/tasks.yaml`
+
+### Behavior
+
+1. Load the task definition from `{plans_dir}/tasks.yaml`. Extract
+   `must_call_unchanged` (preferred) or, if absent, compute the
+   external symbol set by AST-walking each file in `affects_files`
+   for cross-module imports.
+
+2. For each `Module.Class.method` symbol in the set:
+   - Resolve via `ast.parse` against the file at HEAD (per Step 2's
+     contract snapshot logic).
+   - If unresolvable → emit `unresolved_symbols: [...]` with the list
+     of methods actually present on the target class.
+   - If resolvable but signature differs from what the task spec
+     implies → emit `signature_concerns: [...]`.
+
+3. Output: short YAML report at
+   `{plans_dir}/preflight/{task_id}.yaml`.
+
+4. Exit code: `0` if clean (no unresolved or concerning entries),
+   `1` if any entries.
+
+### Example output (PV2 cdcfdb2 fixture)
+
+```yaml
+task_id: T4M.3
+generated_at: 2026-05-09T14:00:00Z
+unresolved_symbols:
+  - target: autoservice.cc_pool.CCPool.acquire_for_session
+    referenced_in_spec: docs/superpowers/specs/2026-05-07-pipeline-v2-three-color-design.md §6
+    available_on_target: [acquire, acquire_sticky, acquire_async]
+    suggested_action: confirm with user — did you mean acquire_sticky?
+signature_concerns:
+  - target: autoservice.cc_pool.CCPool.session_query
+    spec_implies: positional (conv_id, prompt, tenant_id, ...)
+    real_signature: (conv_id, prompt, *, tenant_id=None, ...)
+    issue: tenant_id is keyword-only after *
+verdict: STOP — implementation must not proceed until unresolved_symbols is empty
+```
+
+### Failure path
+
+When `--preflight` returns non-zero, `skill-5-start-task` halts the
+task with the report content displayed to the user. The user resolves
+by either updating the task spec or correcting the underlying
+assumption.
+
+### Why this exists
+
+Without preflight, the cdcfdb2 bug class (subagent invents a method
+name; fake test double mirrors the invention; CI green; production
+AttributeError) ships routinely. AutoService PV2 paid this cost for
+~14 days on a single fix. See
+`references/ast-walk-template.md` for the contract-test pattern that
+preflight auto-suggests when no contract test covers the consumer
+yet.

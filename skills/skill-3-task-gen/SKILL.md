@@ -124,6 +124,26 @@ For each gap, generate one or more tasks:
 - **Yellow** (AI + human review): Involves prompt engineering, ML model selection, strategy design, or content that needs domain expert review.
 - **Red** (human-driven): Requires stakeholder decisions, legal/compliance review, external API negotiations, or architecture trade-offs with no clear winner.
 
+**Auto color-promotion (0.4.0+)**: After applying the standard rules
+above, run the auto-promote check. A task originally typed `green` is
+promoted to `yellow` (and `auto_promoted: true` is set on the task)
+when ANY of:
+
+1. `affects_files` / `deliverables[*].path` glob matches any of:
+   - `**/auth*/**`, `**/permission*/**`, `**/login*`, `**/token*`, `**/credential*`
+   - `**/*contract*`, `**/*protocol*`, `**/*schema*` (excluding test files)
+2. `must_call_unchanged` list is non-empty
+3. `meta.connector_seam: true` (already set by R15 / 0.3.1 connector-seam rule)
+4. `env_var.class: A` (security boundary)
+
+When auto-promotion fires, set `type: yellow` and `auto_promoted: true`
+on the generated task. Yellow handling proceeds as normal (review,
+preflight, contract re-read).
+
+Rationale: M3 retro batch-2 §🟢 finding *"some Green tasks have
+hidden security surface that should go through review."* The 14/14
+reviewer-caught Critical bug rate in M3 confirms this is high ROI.
+
 **Task Structure**:
 ```yaml
 tasks:
@@ -183,6 +203,33 @@ Before emitting any task, check each `task.deliverables[*].path` against `task_h
 1. Tokenize each non_goal string (split on spaces; strip punctuation).
 2. If any token appears in the deliverable path → reject the task; emit warning: `"task excluded per non_goal: '{non_goal}' matches '{path}'"`
 3. Rejected tasks are not written to `tasks.yaml`; they are listed at the bottom of the summary.
+
+### Step 2.6: Inline house conventions into task context (0.4.0+)
+
+Before emitting each task, read `{plans_dir}/conventions.md` (if
+exists, written by `skill-2-gap-scan` Step 3.5). For each task whose
+`affects_files` glob matches a file referenced by the conventions
+cheat-sheet, inline the relevant conventions into the task's
+`context_block` field:
+
+```yaml
+- id: T-EXAMPLE.2
+  ...
+  context_block: |
+    Project conventions for files touched here:
+    - IDs: secrets.token_urlsafe(36) (see autoservice/customer_manager.py:42)
+    - Timestamps: ISO 8601 (`datetime.utcnow().isoformat()`)
+    - Logger: `logger = logging.getLogger(__name__)` per module
+    - MCP servers: hook into cc_pool.py:691 auto-inject — DO NOT duplicate
+```
+
+Subagents in `skill-8-batch-dispatch` see this in their dispatch
+prompt, eliminating the "reinvented ID format" and "reinvented MCP
+bootstrap" failure modes.
+
+When `conventions.md` is absent (skill-2 not run, or skill-2 missing
+Step 3.5 from older 0.3.x install), skip silently — task generation
+proceeds without the inlined block.
 
 ### Step 3: Dependency Analysis
 

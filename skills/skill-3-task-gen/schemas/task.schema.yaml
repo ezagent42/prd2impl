@@ -77,3 +77,81 @@ properties:
     items:
       type: string
     description: "Artifact IDs from .artifacts/registry.json"
+
+  # ---- 0.4.0 additions (P1-4) — see spec 2026-05-09-skill-chain-wiring-design.md
+  must_call_unchanged:
+    type: array
+    description: |
+      Symbols (Module.Class.method or function) this task must continue
+      to invoke unchanged. Consumed by skill-12-contract-check --preflight
+      to verify each symbol resolves on real production classes before
+      code is written. Prevents the cdcfdb2 bug class (subagent invents
+      a method, fake test double mirrors it, production AttributeError).
+    items:
+      type: string
+      pattern: "^[A-Za-z_][A-Za-z0-9_.]*$"
+    default: []
+
+  env_var:
+    type: object
+    description: |
+      For tasks introducing a new feature flag / env var, declare its
+      class and operational profile.
+        Class A = security boundary (Makefile-pinned per recipe; never
+                  in .env — a stale value would leak across recipes)
+        Class B = credential (.env REQUIRED block; placeholder in .env.example)
+        Class C = feature flag / tunable (defaults in code; documented
+                  in CLAUDE.md kill-switch section)
+      Mirrors the AutoService CLAUDE.md "Environment Variables" taxonomy.
+    properties:
+      name:
+        type: string
+        pattern: "^[A-Z][A-Z0-9_]*$"
+      class:
+        type: string
+        enum: [A, B, C]
+      code_default:
+        type: string
+        description: "Default the code uses if env unset."
+      ops_default:
+        type: string
+        description: |
+          Default operations actually runs with. May differ from
+          code_default — when so, the gap must land in CLAUDE.md
+          OVERRIDES block. (Captures the
+          PIPELINE_V2_DEEPSEEK_TIMEOUT_MS 800→3000 mismatch lesson.)
+      kill_switch_semantics:
+        type: string
+        description: "What happens when set to 0 / unset / non-default."
+    required: [name, class]
+
+  reload_kind:
+    type: string
+    description: |
+      Whether changes from this task take effect via:
+        hot     — no process action (e.g. skill files; per AutoService
+                  CLAUDE.md 'skill is hot, soul needs restart')
+        recycle — tenant recycle (recycle_tenant API)
+        restart — full restart (make stop && make start)
+      Required when task affects soul/skill/config artifacts.
+    enum: [hot, recycle, restart]
+
+  auto_promoted:
+    type: boolean
+    description: |
+      Set by skill-3 Step 5 when a task originally typed Green is
+      auto-promoted to Yellow because its affects_files glob matches
+      auth/permission/contract/seam patterns or its must_call_unchanged
+      list is non-empty. Auditable signal for reviewer-routing
+      decisions. See M3 retro batch-2 §🟢 finding 'some Green tasks
+      have hidden security surface'.
+    default: false
+
+  tombstone:
+    type: boolean
+    description: |
+      When true, this task is a tombstone for a descoped/deferred
+      story. Router (using-prd2impl) and skill-7-next-task refuse to
+      dispatch. Use in conjunction with status: DEFERRED_* and a
+      leading TOMBSTONE comment in tasks.yaml documenting the reason.
+    default: false

@@ -123,14 +123,60 @@ Autorun does **not** ask for permission to retry or fix. It follows this decisio
 
 ### Step 5: Self-Review Checkpoints (Yellow mode)
 
-In `--autopilot=yellow` or `all`, Yellow tasks still need a "review". Autorun performs a **self-review pass** instead of human STOP:
+In `--autopilot=yellow` or `all`, Yellow tasks still need a "review".
+Autorun performs a **two-stage review** instead of human STOP, per
+`superpowers:subagent-driven-development`. The 0.3.x single-stage
+review missed the "added unrequested feature" class — exactly what
+produced the AutoService PV2 dead-code phenomenon (entire
+`pipeline_v2/kb_mcp/` directory shipped per spec, deleted as dead
+code one day post-gate in commit `f82c22e`).
 
-1. Draft the Yellow deliverable
-2. Invoke `superpowers:requesting-code-review` to dispatch the `code-reviewer` subagent (independent review — not self-graded)
-3. If reviewer returns ≥1 **blocking** issue → revise once, then accept (do not loop indefinitely)
-4. Record reviewer verdict in the commit message: `task: {ID} → completed (autopilot-yellow, reviewer: {summary})`
+#### Stage A — Spec compliance reviewer
 
-If `superpowers:requesting-code-review` is unavailable, Yellow tasks are **always deferred** (not auto-completed) regardless of level.
+Goal: catch over-building (work beyond spec) and under-building
+(missing spec items).
+
+1. Draft the Yellow deliverable.
+2. Invoke `superpowers:requesting-code-review` with prompt focused on:
+   - "Did the diff deliver every item in the task spec? List any missing."
+   - "Did the diff add ANY code, files, helpers, flags, or tests not
+     requested by the task spec? List every extra."
+   - "For every external symbol called in the diff, does it resolve
+     on the real production class? Reject if any call targets a method
+     that does not exist on HEAD." (catches the cdcfdb2 class — see
+     `skill-12-contract-check --preflight` for the upstream gate)
+3. Reviewer output verdict: `REQUESTED_DELIVERED [Y / N / PARTIAL]`
+   plus `EXTRAS [list]`.
+
+If verdict is N or extras non-empty → revise the diff to either
+match spec or update spec (with user confirmation) before Stage B.
+
+#### Stage B — Code quality reviewer
+
+Only after Stage A clears (no missing items, no extras).
+
+1. Invoke `superpowers:requesting-code-review` again with prompt
+   focused on:
+   - Code quality (naming, structure, error handling, tests, docs)
+   - Standard 0.3.x yellow review checklist
+2. If reviewer returns ≥1 blocking issue → revise once, then accept.
+3. Record both verdicts in commit message:
+   `task: {ID} → completed (autopilot-yellow, stage-A: {summary}, stage-B: {summary})`
+
+#### Cost note
+
+Stage A is a focused 200-token check. Total reviewer cost increase
+~30% over 0.3.x single-stage, not 100%. Justified by retro evidence
+that Stage A catches a class of bugs single-stage review misses
+(over-building per spec but under-wiring in production).
+
+#### Graceful degradation
+
+If `superpowers:requesting-code-review` is unavailable, Yellow tasks
+are **always deferred** (not auto-completed) regardless of level —
+matches 0.3.x behavior. If `superpowers:subagent-driven-development`
+is unavailable but `requesting-code-review` exists, fall back to
+single-stage review with a logged warning.
 
 ### Step 6: Red-Task Default Picking (`all` mode only)
 
