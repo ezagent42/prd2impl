@@ -239,12 +239,17 @@ or `failed`).
   If sanity-check fails, treat as a terminal failure (mark blocked, do not
   fabricate a plan).
 - **After review checklist** (Yellow): do not stop for user approval.
-  Instead invoke `superpowers:requesting-code-review` for an independent
-  review pass. If the reviewer returns ≥1 blocking issue, revise **once**,
-  then accept and commit. Record reviewer verdict in commit message:
-  `task: {ID} → completed (autopilot-yellow, reviewer: {one-line verdict})`.
+  Instead invoke the **two-stage review** per skill-13 §Step 5
+  (Stage A spec-compliance, then Stage B code-quality). Both stages
+  dispatch via `superpowers:requesting-code-review` with prompts
+  defined in skill-13. Stage A catches over-building; Stage B catches
+  code-quality regressions. Record both verdicts in commit message:
+  `task: {ID} → completed (autopilot-yellow, stage-A: {summary}, stage-B: {summary})`.
   If `superpowers:requesting-code-review` is unavailable, **do not
-  auto-approve Yellow** — fall back to STOP regardless of level.
+  auto-approve Yellow** — fall back to STOP regardless of level. If
+  `superpowers:subagent-driven-development` is unavailable but
+  `requesting-code-review` exists, fall back to single-stage review
+  with a logged warning (matches 0.3.x behavior).
 - **Design decisions** (Red, `all` only): pick the most
   reversible / least lock-in option and record the rationale inline.
   Commit: `task: {ID} → completed (autopilot-all, DEFAULT-PICKED)`.

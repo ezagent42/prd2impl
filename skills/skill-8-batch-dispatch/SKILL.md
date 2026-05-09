@@ -202,6 +202,22 @@ You are working on task {task_id} ({task_name}) in the {project_name} project.
 - Do NOT modify files outside your task scope
 - Commit with message format: "task: {task_id} — {description}"
 - When done or blocked, update task-status.md
+
+## Mock discipline (0.4.0+)
+- See references/mock-policy.md for what may / must-not be mocked.
+- Bare MagicMock() / AsyncMock() without spec= is FORBIDDEN in
+  tests/ for any production class. Use MagicMock(spec=Class).
+- Hand-rolled _FakeX classes require a paired contract test
+  (see skill-12-contract-check/references/ast-walk-template.md).
+
+## Yellow review expectations (0.4.0+)
+- Yellow tasks receive TWO reviewer passes per
+  superpowers:subagent-driven-development:
+    Stage A — spec compliance: "did you deliver only what was asked?"
+              Catches over-building (helpers, flags, scaffolds not in spec).
+    Stage B — code quality: standard 0.3.x review.
+- Do NOT bundle extras "while you're in the file"; spec wins.
+- Both stages run via superpowers:requesting-code-review.
 """
 ```
 
