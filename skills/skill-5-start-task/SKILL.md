@@ -68,6 +68,49 @@ Launch a specific task, verify its prerequisites, update the status tracker, and
 3. Read related contract files (`docs/contracts/*`) if referenced
 4. Read the PRD sections relevant to this task (via `story_refs` → `prd-structure.yaml`)
 
+### Step 4.5: Preflight signature probe (Yellow + must_call_unchanged tasks)
+
+**Trigger condition** — invoke when ANY of:
+- task `type: yellow`
+- `must_call_unchanged: [...]` non-empty
+- `affects_files` glob matches `**/*contract*` or `**/*protocol*`
+- `meta.connector_seam: true`
+
+**Invoke**:
+```
+/contract-check --preflight {task_id}
+```
+
+This calls skill-12's preflight subcommand to AST-resolve every
+external symbol the task will call against the real production
+classes at HEAD. Output lands at `{plans_dir}/preflight/{task_id}.yaml`.
+
+**Read the report** and act per its `verdict`:
+
+- `verdict: STOP` — display the report to the user. Halt the task.
+  Do NOT proceed to Step 5 (type-specific workflow) under any
+  circumstance, including autopilot. Possible resolutions:
+  - Update task spec to use the correct symbol name
+  - Update task spec to acknowledge the signature change
+  - If the symbol is genuinely missing because the contract file is
+    being introduced in this task, mark the preflight skipped with a
+    comment in tasks.yaml
+
+- `verdict: PROCEED` — continue to Step 5 with the preflight report
+  attached to the task's context block.
+
+**Why this matters** — without preflight, the cdcfdb2 bug class
+ships routinely: subagent invents a method name (e.g.
+`pool.acquire_for_session`); fake test double mirrors the invention;
+unit tests pass; production logs `AttributeError: 'CCPool' object
+has no attribute 'acquire_for_session'` for ~14 days. The preflight
+catches this **before** code is written. See spec §5 P0-2.
+
+**Graceful degradation** — if `/contract-check` is not registered
+(skill-12 missing or older prd2impl install without the `--preflight`
+subcommand), emit a logged warning and proceed. Document the risk to
+the user once per session.
+
 ### Step 5: Enter Type-Specific Workflow
 
 > **Autopilot note:** if `--autopilot` was passed, the STOP points in the

@@ -284,3 +284,72 @@ If yes, apply fixes and run tests. If tests pass, commit.
 - **Reactively**: When a test fails with "unexpected argument" or "missing field" errors
 - **On contract change**: After any edit to `docs/contracts/` files
 - **Cross-line sync**: When the other developer reports a contract change
+- **Pre-flight per task**: Automatically invoked from `skill-5-start-task` Step 4.5 for every Yellow task and any task with `must_call_unchanged`. See `--preflight` subcommand below.
+
+## Preflight subcommand: `/contract-check --preflight {task_id}`
+
+Invoked BEFORE writing code, by `skill-5-start-task` Step 4.5 for any
+task that satisfies one of:
+- `type: yellow` (always)
+- `must_call_unchanged: [...]` is non-empty
+- `affects_files` glob matches `**/*contract*` / `**/*protocol*`
+- `meta.connector_seam: true`
+
+### Inputs
+- `{task_id}` — looked up in `{plans_dir}/tasks.yaml`
+
+### Behavior
+
+1. Load the task definition from `{plans_dir}/tasks.yaml`. Extract
+   `must_call_unchanged` (preferred) or, if absent, compute the
+   external symbol set by AST-walking each file in `affects_files`
+   for cross-module imports.
+
+2. For each `Module.Class.method` symbol in the set:
+   - Resolve via `ast.parse` against the file at HEAD (per Step 2's
+     contract snapshot logic).
+   - If unresolvable → emit `unresolved_symbols: [...]` with the list
+     of methods actually present on the target class.
+   - If resolvable but signature differs from what the task spec
+     implies → emit `signature_concerns: [...]`.
+
+3. Output: short YAML report at
+   `{plans_dir}/preflight/{task_id}.yaml`.
+
+4. Exit code: `0` if clean (no unresolved or concerning entries),
+   `1` if any entries.
+
+### Example output (PV2 cdcfdb2 fixture)
+
+```yaml
+task_id: T4M.3
+generated_at: 2026-05-09T14:00:00Z
+unresolved_symbols:
+  - target: autoservice.cc_pool.CCPool.acquire_for_session
+    referenced_in_spec: docs/superpowers/specs/2026-05-07-pipeline-v2-three-color-design.md §6
+    available_on_target: [acquire, acquire_sticky, acquire_async]
+    suggested_action: confirm with user — did you mean acquire_sticky?
+signature_concerns:
+  - target: autoservice.cc_pool.CCPool.session_query
+    spec_implies: positional (conv_id, prompt, tenant_id, ...)
+    real_signature: (conv_id, prompt, *, tenant_id=None, ...)
+    issue: tenant_id is keyword-only after *
+verdict: STOP — implementation must not proceed until unresolved_symbols is empty
+```
+
+### Failure path
+
+When `--preflight` returns non-zero, `skill-5-start-task` halts the
+task with the report content displayed to the user. The user resolves
+by either updating the task spec or correcting the underlying
+assumption.
+
+### Why this exists
+
+Without preflight, the cdcfdb2 bug class (subagent invents a method
+name; fake test double mirrors the invention; CI green; production
+AttributeError) ships routinely. AutoService PV2 paid this cost for
+~14 days on a single fix. See
+`references/ast-walk-template.md` for the contract-test pattern that
+preflight auto-suggests when no contract test covers the consumer
+yet.
