@@ -61,6 +61,12 @@ A task is **executable** if ALL of these are true:
 - All `depends_on` tasks have status EXACTLY `completed` (🟩)
 - No items in `blocked_by` are active
 - Task line matches developer's line or is `shared`
+- **Not tombstoned** (0.4.0+): drop any task with `tombstone: true`,
+  `status: DEFERRED_*`, or a leading `TOMBSTONE:` comment per the
+  tombstone gate in `using-prd2impl/SKILL.md`. If after filtering the
+  candidate set is empty AND tombstoned tasks exist, return:
+  > "No active candidates. N tasks are tombstoned (deferred to future
+  > milestones); run `/task-status` for details."
 
 **Parsing task-status.md (fallback mode):**
 When reading markdown tables, pay careful attention to the status column emoji:

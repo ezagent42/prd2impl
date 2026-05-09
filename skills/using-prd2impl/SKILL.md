@@ -238,5 +238,55 @@ When both companions are installed, `.artifacts/` subdirectories are split:
 | Owner | Subdirectory | Content |
 |-------|-------------|---------|
 | dev-loop-skills | `test-plans/`, `test-diffs/`, `e2e-reports/`, `eval-docs/` | Per-task testing artifacts |
-| prd2impl | `tasks/`, `milestones/`, `retros/`, `contract-checks/` | Project-level artifacts |
+| prd2impl | `tasks/`, `milestones/`, `retros/`, `contract-checks/`, `framework-patches/`, `preflight/` | Project-level artifacts |
 | shared | `registry.json` | Cross-skill artifact index (dev-loop writes, prd2impl reads) |
+
+## Tombstone gate (0.4.0+)
+
+Some user stories / epics get descoped during a milestone (typical
+reasons: out-of-scope per source PRD revision, deferred for capacity,
+moved to a later milestone). The router refuses to dispatch against
+these.
+
+### Detection
+
+On any prd2impl command invocation that loads tasks, glob
+`{plans_dir}/*.yaml` for entries matching ANY of:
+
+- `tombstone: true` (preferred — explicit field per task.schema.yaml)
+- `status: DEFERRED_*` (e.g. `DEFERRED_M4`)
+- A leading YAML comment `# TOMBSTONE: <reason>` immediately above
+  the task entry
+
+### Behavior
+
+- **`/next-task`** ranking skips tombstoned candidates entirely.
+- **`/start-task <id>`** on a tombstoned task returns:
+  ```
+  REFUSED — task is tombstoned
+  Status: DEFERRED_M4 (since 2026-04-22)
+  Source: plans/m3/tasks.yaml#L412
+  Reason: Out-of-scope per v1.1 §8 (whitelabel not in scope)
+  To revive: update task status and re-run /task-gen.
+  ```
+- **`/batch-dispatch`** excludes tombstoned tasks from any batch.
+- **`/task-status`** lists tombstones in a separate "Deferred"
+  section, not in the active task table.
+
+### Rationale
+
+Project memory entries (e.g. AutoService
+`project_m3_epic_e2_descoped.md`, `project_m3_4_deferred_to_m3_5.md`)
+explicitly say "do not generate tasks for E2.x" but 0.3.x router
+ignored them. The tombstone gate makes the discipline mechanical —
+descoped epics cannot be silently re-pulled into a new milestone's
+planning.
+
+### Reviving a tombstoned task
+
+1. Update the source PRD or memory to confirm the descope is
+   reversed.
+2. Edit the task entry: remove `tombstone: true`, update `status:`
+   to `pending`, remove the `TOMBSTONE:` comment.
+3. Re-run `/task-gen` if the task definition changed materially.
+4. The task is now eligible for dispatch.
