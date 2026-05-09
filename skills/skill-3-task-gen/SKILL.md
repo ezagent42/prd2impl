@@ -204,6 +204,33 @@ Before emitting any task, check each `task.deliverables[*].path` against `task_h
 2. If any token appears in the deliverable path → reject the task; emit warning: `"task excluded per non_goal: '{non_goal}' matches '{path}'"`
 3. Rejected tasks are not written to `tasks.yaml`; they are listed at the bottom of the summary.
 
+### Step 2.6: Inline house conventions into task context (0.4.0+)
+
+Before emitting each task, read `{plans_dir}/conventions.md` (if
+exists, written by `skill-2-gap-scan` Step 3.5). For each task whose
+`affects_files` glob matches a file referenced by the conventions
+cheat-sheet, inline the relevant conventions into the task's
+`context_block` field:
+
+```yaml
+- id: T-EXAMPLE.2
+  ...
+  context_block: |
+    Project conventions for files touched here:
+    - IDs: secrets.token_urlsafe(36) (see autoservice/customer_manager.py:42)
+    - Timestamps: ISO 8601 (`datetime.utcnow().isoformat()`)
+    - Logger: `logger = logging.getLogger(__name__)` per module
+    - MCP servers: hook into cc_pool.py:691 auto-inject — DO NOT duplicate
+```
+
+Subagents in `skill-8-batch-dispatch` see this in their dispatch
+prompt, eliminating the "reinvented ID format" and "reinvented MCP
+bootstrap" failure modes.
+
+When `conventions.md` is absent (skill-2 not run, or skill-2 missing
+Step 3.5 from older 0.3.x install), skip silently — task generation
+proceeds without the inlined block.
+
 ### Step 3: Dependency Analysis
 
 1. **Explicit dependencies**: From gap_ref → gap.depends_on_gaps → task mapping

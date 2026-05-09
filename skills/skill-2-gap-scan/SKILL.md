@@ -81,6 +81,69 @@ For each module in the PRD structure:
    - Verify import paths exist
    - Check for interface/contract files between modules
 
+### Step 3.5: House-conventions extraction (0.4.0+)
+
+Subagents writing new code should follow project-wide patterns
+rather than reinventing them. Extract recurring patterns into a
+cheat-sheet that skill-3-task-gen inlines into every task's context
+block. Without this step, subagents in skill-8 dispatch produce
+code that re-invents what's already in the project — see AutoService
+PV2 `pipeline_v2/kb_mcp/` (commit `f82c22e` deleted it as duplicate
+of `cc_pool.py:691`).
+
+**Patterns to grep**:
+
+1. **Timestamp format** — `datetime.utcnow()` vs `time.time()` vs
+   ISO string. Capture the dominant pattern + 2 example file:line.
+2. **ID generation** — `uuid.uuid4()`, `secrets.token_urlsafe(N)`,
+   custom prefix scheme. Capture pattern + N + example.
+3. **Error types** — project-defined exception classes, common
+   inheritance (e.g. `class FooError(BaseError)`). List top 5 by
+   reference count.
+4. **Test fixture singletons** — `_reset_*_db_for_tests` patterns,
+   `conftest.py` scope conventions.
+5. **Logging** — logger name pattern (`logger = logging.getLogger(__name__)`),
+   structured log helper if any.
+6. **HTTP / RPC client setup** — bare `httpx.Client()` vs project-
+   scoped wrapper; auth header injection convention.
+7. **MCP server registration** — for projects using MCP, look for
+   existing auto-injection points (e.g. AutoService's
+   `cc_pool.py:691`-style `build_kb_mcp_server`). New MCP tasks
+   should reuse, not duplicate.
+
+**Output**: write to `{plans_dir}/conventions.md`:
+
+```markdown
+# Project conventions (extracted by skill-2-gap-scan)
+
+Generated: 2026-05-09
+Inputs scanned: autoservice/, channels/, plugins/
+
+## Timestamps
+- Format: ISO 8601 strings (`datetime.utcnow().isoformat()`)
+- Source: autoservice/customer_manager.py:42, autoservice/crm.py:118
+- Avoid: epoch ints, naive datetimes
+
+## ID generation
+- Pattern: `secrets.token_urlsafe(36)`
+- Source: autoservice/customer_manager.py:42
+
+## Error types
+- Base: `AutoServiceError` (autoservice/errors.py:5)
+- Top inheritors: TenantError, ChannelError, ContractError
+
+## MCP server registration
+- Pattern: per-tenant auto-inject via `cc_pool.py:691` `build_kb_mcp_server(tenant_id) -> MCPServer`
+- Reuse rule: any new MCP need should hook into this auto-inject path,
+  NOT duplicate the bootstrap. (PV2 kb_mcp/ duplicate-of-cc_pool
+  failure mode.)
+
+(... continued for each pattern ...)
+```
+
+This file becomes a stable input to skill-3-task-gen Step 4 (which
+reads it and inlines relevant entries into each task's context block).
+
 ### Step 4: Generate Gap Report
 
 Produce structured output:
