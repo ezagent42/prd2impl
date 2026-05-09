@@ -124,6 +124,26 @@ For each gap, generate one or more tasks:
 - **Yellow** (AI + human review): Involves prompt engineering, ML model selection, strategy design, or content that needs domain expert review.
 - **Red** (human-driven): Requires stakeholder decisions, legal/compliance review, external API negotiations, or architecture trade-offs with no clear winner.
 
+**Auto color-promotion (0.4.0+)**: After applying the standard rules
+above, run the auto-promote check. A task originally typed `green` is
+promoted to `yellow` (and `auto_promoted: true` is set on the task)
+when ANY of:
+
+1. `affects_files` / `deliverables[*].path` glob matches any of:
+   - `**/auth*/**`, `**/permission*/**`, `**/login*`, `**/token*`, `**/credential*`
+   - `**/*contract*`, `**/*protocol*`, `**/*schema*` (excluding test files)
+2. `must_call_unchanged` list is non-empty
+3. `meta.connector_seam: true` (already set by R15 / 0.3.1 connector-seam rule)
+4. `env_var.class: A` (security boundary)
+
+When auto-promotion fires, set `type: yellow` and `auto_promoted: true`
+on the generated task. Yellow handling proceeds as normal (review,
+preflight, contract re-read).
+
+Rationale: M3 retro batch-2 §🟢 finding *"some Green tasks have
+hidden security surface that should go through review."* The 14/14
+reviewer-caught Critical bug rate in M3 confirms this is high ROI.
+
 **Task Structure**:
 ```yaml
 tasks:

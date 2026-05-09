@@ -37,6 +37,58 @@ tasks:
     owner: null
     artifacts: []     # Filled during execution
 
+  # ── 0.4.0 example: task using all new optional fields ──────
+  - id: T-EXAMPLE.1
+    name: "Wire pre-flight contract probe to dispatch path"
+    description: "Skill-5 invokes /contract-check --preflight before code-write."
+    line: shared
+    type: yellow
+    phase: P1
+    depends_on: []
+    affects_files:
+      - autoservice/cc_pool.py
+    must_call_unchanged:
+      # Symbols verified at preflight time against real cc_pool module.
+      # Catches the cdcfdb2 bug class.
+      - autoservice.cc_pool.CCPool.acquire_sticky
+      - autoservice.cc_pool.CCPool.session_query
+    env_var:
+      name: PIPELINE_V2_PREFLIGHT_ENABLED
+      class: C   # feature flag / tunable (not security boundary, not credential)
+      code_default: "1"
+      ops_default: "1"
+      kill_switch_semantics: "0 = skip preflight, fall back to 0.3.x behavior"
+    reload_kind: restart
+    deliverables:
+      - { path: "autoservice/pipeline_v2/main_agent/runner.py", type: code }
+      - { path: "tests/pipeline_v2/test_runner_pool_contract.py", type: test }
+    verification: "pytest tests/pipeline_v2/test_runner_pool_contract.py -v"
+    estimated_effort: medium
+    status: pending
+    owner: null
+    artifacts: []
+
+  # ── 0.4.0 example: tombstoned task (descoped) ──────────────
+  # Router (using-prd2impl) and skill-7-next-task refuse to dispatch
+  # tasks with tombstone: true. /start-task on this id returns REFUSED.
+  - id: E2.1
+    name: "Subtenant onboarding flow"
+    description: "DEFERRED — out of scope per v1.1 §8 errata."
+    line: shared
+    type: yellow
+    status: blocked  # status enum stays valid; tombstone field is the gate
+    tombstone: true
+    # TOMBSTONE: Out-of-scope per v1.1 §8 errata (whitelabel not in scope).
+    #            Originally drafted in M3 spec line 412. To revive,
+    #            update PRD and re-run /prd-analyze + /task-gen.
+    phase: P0
+    depends_on: []
+    deliverables: []
+    verification: "n/a — tombstoned"
+    estimated_effort: small
+    owner: null
+    artifacts: []
+
 # ── Dependency Graph ─────────────────────────────────────
 dependency_graph:
   # task_id: [tasks that depend on it]
