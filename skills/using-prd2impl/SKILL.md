@@ -206,8 +206,8 @@ companion skill isn't installed, prd2impl falls back to a simpler path.
 
 | prd2impl stage | Companion skill invoked | Purpose | Degrades to |
 |----------------|-------------------------|---------|-------------|
-| skill-1 PRD analysis | `superpowers:brainstorming` | Surface ambiguity before YAML extraction | Direct extraction without interactive clarification |
-| skill-4 plan-schedule | `superpowers:writing-plans` | Structured plan authoring | In-skill template-based plan |
+| skill-1 PRD analysis (Phase 0.5, 0.5.0+) | `superpowers:brainstorming` via `lib/brainstorm-runner.md` | Surface ambiguity before YAML extraction; batched ≤8/round | Direct extraction without interactive clarification |
+| skill-4 plan-schedule (Step 4.5, 0.5.0+) | `superpowers:writing-plans` via `lib/plans-runner.md` | Per-task plan generation; output is writing-plans-format md per task with `source_plan_path` recorded back to tasks.yaml | In-skill no-plan-md generation (0.4.x); tasks fall back to legacy Step 5 |
 | skill-5 start-task (Red) | `superpowers:brainstorming` | Ground design-decision questions in trade-off exploration | Direct question drafting |
 | skill-5 start-task (Green/Yellow, impl step) | `superpowers:test-driven-development` | Enforce red/green/refactor rhythm | Ad-hoc implementation ordering |
 | skill-5 start-task (Green) | `dev-loop-skills:skill-5-feature-eval` (simulate) | Produce eval-doc | Skill-5 still stops for user review without structured eval |
