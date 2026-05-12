@@ -26,6 +26,66 @@ Parse a Product Requirements Document (PRD) into structured, machine-queryable Y
 
 > **Path resolution**: Before constructing any output path, resolve `{plans_dir}` per `lib/plans-dir-resolver.md`. All `docs/plans/` references below (except `docs/plans/project.yaml`, which stays at repo root) are relative to that resolved directory.
 
+### Phase 0.5 — Ambiguity Detection (0.5.0+)
+
+**Triggers when**: `superpowers:brainstorming` is installed AND the input PRD is non-empty.
+
+**Read**: `lib/brainstorm-runner.md` — follow it exactly for this phase.
+
+Steps:
+
+1. Parse the PRD into a draft `prd_structure` dict (modules, user stories, NFRs, constraints, external_deps) using the same regex/scan heuristics as Phase 1 — this is a preliminary pass; the real extraction happens in Phase 1 after Phase 0.5 resolutions are applied.
+
+2. Invoke `superpowers:brainstorming` with the framing prompt from `lib/brainstorm-runner.md`. Pass the PRD text and the draft prd_structure as inputs.
+
+3. Brainstorming returns an `ambiguity_report` (schema in brainstorm-runner.md). Capture:
+   - `auto_resolved[]` — append to `{plans_dir}/{date}-ambiguity-resolution-log.md` (one entry per auto-resolve); no user interaction needed
+   - `user_decisions_pending[]` — surface to the user
+
+4. **[HUMAN REVIEW CHECKPOINT 0.5]** — if `user_decisions_pending` is non-empty:
+
+   Present in batches of ≤8 per round (priority order: cross_story_conflict → nfr_vs_functional_conflict → constraint_implicit_external → module_boundary_undefined).
+
+   Each question is multi-choice with the brainstorm-runner-provided options.
+
+5. Apply the user's resolutions:
+   - For cross_story_conflict: amend `draft_prd_structure.user_stories` per the chosen option (drop fields, add tenant scoping, etc.)
+   - For nfr_vs_functional_conflict: amend `draft_prd_structure.nfrs` and/or insert a new `constraints[]` entry capturing the chosen trade-off
+   - For module_boundary_undefined: add a stub `modules[]` entry with the chosen interpretation
+   - For constraint_implicit_external: add the system to `external_deps[]`
+
+6. Write a summary into the (final) prd_structure:
+
+   ```yaml
+   extraction:
+     ambiguity_resolution:
+       auto: <auto_resolved_count>
+       asked: <user_pending_count>
+       rounds: <batches_required>
+       resolutions:
+         - id: A1
+           chosen: "<label>"
+         # ...
+   ```
+
+   When Phase 0.5 was skipped (brainstorming not installed), the same block is written with the skip-path variant:
+
+   ```yaml
+   extraction:
+     ambiguity_resolution:
+       auto: 0
+       asked: 0
+       skipped_reason: "brainstorming-not-installed"
+   ```
+
+   This makes downstream contract-check (skill-12) able to distinguish "Phase 0.5 ran and found nothing" from "Phase 0.5 was skipped."
+
+7. Proceed to Phase 1 with the amended `draft_prd_structure` as the starting point.
+
+**Graceful degradation**: if `superpowers:brainstorming` is not installed, skip this phase entirely. Log the warning prescribed in `lib/brainstorm-runner.md §Graceful degradation`. Phase 1 proceeds with the unamended PRD; the `extraction.ambiguity_resolution` block is written with the skip-path variant shown in Step 6 below.
+
+**Verification**: applying this phase to `tests/fixtures/prd-bridge/conflict-prd.md` must produce an `ambiguity_report` matching `tests/expected/conflict-prd.ambiguity-report.yaml` on the 3 user-pending entries (IDs A1, A2, A3).
+
 ### Step 1: Read & Understand the PRD
 
 1. Read the entire PRD document
