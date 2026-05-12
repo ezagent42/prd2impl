@@ -157,6 +157,18 @@ milestones:
 
 **Read**: `lib/plans-runner.md` — follow it exactly for this step.
 
+**Pre-loading requirements** (for Step 4.5a): Step 4.5 reads from upstream artifacts that the existing Step 1 does not load. Before Step 4.5a, load:
+
+- `{plans_dir}/*-prd-structure.yaml` (most recent, from skill-1 — needed for `prd_structure.modules` lookup)
+- `{plans_dir}/*-gap-analysis.yaml` (most recent, from skill-2 — needed for `gap_analysis.gaps` lookup)
+- `{plans_dir}/conventions.md` (optional, from skill-2 Step 3.5 — needed for `conventions` field)
+
+If `prd-structure.yaml` is absent, omit the `prd_modules` field from each spec_package (plans-runner can self-drive without it, just less context-rich).
+If `gap-analysis.yaml` is absent, omit the `gap_refs` field similarly.
+If `conventions.md` is absent, populate `conventions` from `project.yaml` only.
+
+These are all soft dependencies — Step 4.5 proceeds with whatever upstream artifacts are available.
+
 Steps:
 
 #### Step 4.5a — Generate plans (self-drive pass)

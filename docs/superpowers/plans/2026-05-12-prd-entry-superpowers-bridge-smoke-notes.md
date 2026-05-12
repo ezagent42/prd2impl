@@ -37,6 +37,31 @@ What CAN be promised based on the mechanical work above:
 - The SKILL.md edits are syntactically clean and reference the runner libs.
 - The post-condition contract upgrade (every task gets `source_plan_path`) is correctly described and integrates with 0.4.1's plan-passthrough (Step 5' detection check is unchanged; new flow just populates the field upstream).
 
+## Known gaps deferred to 0.5.1
+
+Surfaced by the final cross-implementation review; non-blocking for 0.5.0 merge but tracked for the next release.
+
+### 1. skill-9 plan_status surfacing (deferred)
+
+`plans-runner.md` describes skill-9 as "surfaces these as `{N} tasks need review` in the Active Tasks dashboard." Currently skill-9 reads `source_plan_path` for checkbox progress but does not read `plan_status`. Stub plans and needs-review plans will show as ordinary tasks in `/task-status` until skill-9 grows a `plan_status` column or warning callout.
+
+**Fix shape (0.5.1)**: add a `plan_status` aware row in skill-9's Active Tasks table:
+- `🟦 in progress` (current) → `🟦 in progress (stub)` or `🟦 in progress (needs_review)` when applicable
+- Or a separate "Plans needing attention" sub-section under the dashboard
+
+### 2. `--skip-plan-gen` flag (deferred)
+
+Design spec §8 promises a `--skip-plan-gen` flag on `/plan-schedule` for testing the legacy fallback. The flag is not wired in skill-4 SKILL.md. The graceful-degradation path (when `superpowers:writing-plans` is missing) achieves the same effect, so this is convenience-only.
+
+**Fix shape (0.5.1)**: add `--skip-plan-gen` to skill-4 Input list + a Step 4.5 trigger guard:
+- `Triggers when: ... AND --skip-plan-gen flag is NOT present`
+
+### 3. `/generate-plan {task_id}` command for stub re-generation (deferred)
+
+The stub plan template tells users to "Regenerate via `/generate-plan {task_id}`". This command is not registered in `.claude-plugin/plugin.json`. Recovery is still possible via re-running `/plan-schedule` after enriching the task entry, but the shortcut is currently broken.
+
+**Fix shape (0.5.1)**: register `/generate-plan` as a thin Step-4.5-on-single-task wrapper, OR update stub text to reference `/plan-schedule`.
+
 ## Suggested dogfooding cycle
 
 1. Merge feat/skill-1-4-superpowers-bridge → main; tag v0.5.0; refresh local plugin cache.
