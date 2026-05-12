@@ -87,10 +87,13 @@ If any files have `detected_role: design-spec`:
 - Print: `  Extracted {F} file_changes, {S} steps, {G} non_goals (spec) + {M} modules, {N} nfrs, {C} constraints (design) from {files}`
 
 If any files have `detected_role: plan`:
-- **Read**: `lib/spec-extractor.md` for steps extraction only (skip file_changes section).
+- **Read**: `lib/spec-extractor.md` — Phase 0 detects writing-plans format and delegates to `lib/plan-parser.md`. For writing-plans-format md (role-detector Signal 0 hit), the output is `task_hints.tasks[]` (Task → Files → Steps hierarchy preserved verbatim). For legacy plans (no writing-plans header), the legacy step-extraction flow (Steps 1-7) runs.
 - **Read**: `lib/prd-extractor.md §Extraction: role=plan` for module extraction.
+- For each entry in `task_hints.tasks[]` (when present), populate `source_plan_path` with the input file's repo-relative path. The parser leaves this null; only the caller knows the path.
 - Merge step data into `task_hints`; merge module data into `prd_structure`.
-- Print: `  Extracted {S} steps (plan) + {M} modules from {files}`
+- Print, depending on path:
+  - writing-plans format: `  Extracted {T} tasks ({S} total steps) (plan-passthrough) + {M} modules from {files}`
+  - legacy format: `  Extracted {S} steps (plan-legacy) + {M} modules from {files}`
 
 ### 2c. PRD / user-stories extraction
 
@@ -155,7 +158,7 @@ Overwriting {path} ({old_count} → {new_count} {entity}[, {old_N} → {new_N} {
 - Per-artifact primary entities (use these labels; add secondary deltas as relevant):
   - `gap-analysis.yaml` → `gaps` (primary), `P0` / `P1` / `P2` (secondary)
   - `prd-structure.yaml` → `modules` (primary), `user_stories` / `constraints` (secondary)
-  - `task-hints.yaml` → `file_changes` (primary), `steps` / `non_goals` (secondary)
+  - `task-hints.yaml` → `file_changes` or `tasks` (primary, whichever is non-empty), `steps` / `non_goals` (secondary). When source role is `plan` AND writing-plans format (plan-passthrough path), `tasks` count is primary; the secondary delta is the sum of `len(t.steps) for t in tasks[]`.
 - If `old_count` is 0 (file did not exist before overwrite — shouldn't reach this branch, but defensive), skip the diff and print `Writing {path} ({new_count} {entity})` instead.
 
 **Required downstream-invalidation hint** (print verbatim after the overwrite):
@@ -257,8 +260,9 @@ All extraction logic lives in `lib/`. Do not duplicate logic here — read the l
 
 | Phase | Read this lib file |
 |-------|--------------------|
-| 1 | `lib/role-detector.md` |
+| 1 | `lib/role-detector.md` (Signal 0 = writing-plans header override → role=plan / confidence=100) |
 | 2a | `lib/gap-extractor.md` |
-| 2b | `lib/spec-extractor.md` |
+| 2b | `lib/spec-extractor.md` (Phase 0 delegates writing-plans md to `lib/plan-parser.md`) |
+| 2b plan-passthrough | `lib/plan-parser.md` (used when role=plan AND writing-plans header present) |
 | 2c | `lib/prd-extractor.md` |
 | 3 | `lib/cross-validator.md` |
