@@ -151,7 +151,84 @@ milestones:
         expected: "All tests pass"
 ```
 
+### Step 4.5 — Per-Task Plan Generation (0.5.0+)
+
+**Triggers when**: `superpowers:writing-plans` is installed AND `tasks.yaml` has at least one task.
+
+**Read**: `lib/plans-runner.md` — follow it exactly for this step.
+
+Steps:
+
+#### Step 4.5a — Generate plans (self-drive pass)
+
+```
+paused_tasks = []
+for task in tasks.yaml.tasks:
+    spec_package = assemble_spec_package(
+        task=task,
+        prd_modules=prd_structure.modules filtered by task.module,
+        gap_refs=gap_analysis.gaps filtered by task.story_refs,
+        conventions=project.yaml + conventions.md (if exists),
+        ambiguity_resolutions=prd_structure.extraction.ambiguity_resolution.resolutions
+                              filtered to those affecting task.module / task.story_refs,
+    )
+    result = plans_runner.invoke(spec_package)
+    if result.status == "ok":
+        write result.plan_md_content to result.plan_md_path
+        update task entry in tasks.yaml: source_plan_path = result.plan_md_path, plan_status = "ok"
+    elif result.status == "paused":
+        paused_tasks.append((task.id, result.pause_points))
+    else:
+        # error / spec too thin
+        write stub plan-md per plans-runner.md § Stub fallback
+        update task entry: source_plan_path = stub_path, plan_status = "stub"
+```
+
+#### Step 4.5b — Batched user interaction (only if any tasks paused)
+
+Surface accumulated `pause_points` in batches of ≤8, prioritized by `reversibility: low` (most irreversible first).
+
+```
+all_pauses = flatten([(tid, pp) for tid, pps in paused_tasks for pp in pps])
+sort by pp.reversibility (low < medium < high)
+for batch in chunks(all_pauses, size=8):
+    present batch to user as multi-choice questions
+    collect user's choices
+    apply choices to relevant task spec_packages
+```
+
+After each batch, replay `plans_runner.invoke()` for affected tasks; expect `status: ok` second time around. If a task still pauses after answer applied, surface as an error: `"task {tid} cannot be planned even after pause-point resolution; manual intervention required"`.
+
+**When user refuses to answer a question (clicks "Skip" or equivalent)**: apply the most-reversible default option (the one with `reversibility: high`; tie-break by the `recommended` label). Replay plans-runner with that default. After replay, the generated plan_md must include a `[NEEDS_REVIEW: <decision_label>]` marker at the top of the affected plan-task body. Set the task's `plan_status: needs_review` in tasks.yaml.
+
+#### Step 4.5c — Final state
+
+Post-conditions of Step 4.5:
+- Every task in `tasks.yaml` has `source_plan_path` set (either to a real plan_md or to a stub).
+- Every plan_md is on disk at `docs/superpowers/plans/{date}-{task_id}.md`.
+- `tasks.yaml` carries `plan_status: ok | stub | needs_review` per task.
+- A `Step 4.5 — Plan Generation Summary` block is appended to the eventual `execution-plan.md` (Step 6):
+
+  ```
+  ## Plan Generation Summary (Step 4.5)
+
+  - {N_ok} tasks: full plans generated
+  - {N_stub} tasks: stub plans (need /generate-plan rerun): T1A.5, T2B.3
+  - {N_review} tasks: full plans with [NEEDS_REVIEW] markers: T3B.1
+  - Total user-interaction rounds: {R}
+  - Total pause_points resolved: {P}
+  ```
+
+**Graceful degradation**: if `superpowers:writing-plans` is not installed, skip this step entirely. Log the warning prescribed in `lib/plans-runner.md §Graceful degradation`. Step 5 proceeds with `tasks.yaml` as-is — no `source_plan_path` on any task.
+
+**Verification**: applying Step 4.5 to a tasks.yaml derived from `tests/fixtures/prd-bridge/conflict-prd.md` must:
+- Produce at least one plan_md whose shape matches `tests/expected/conflict-prd.sample-plan-md.md` (H1 with "Implementation Plan", REQUIRED SUB-SKILL blockquote, ### Task N: headings, - [ ] **Step N:** bullets).
+- Update tasks.yaml so every task has `source_plan_path`.
+- Produce a Plan Generation Summary block in execution-plan.md.
+
 ### Step 5: Generate Collaboration Artifacts
+
+> **Step 4.5 may have run before this** (when `superpowers:writing-plans` is installed). If so, every task in `tasks.yaml` already has `source_plan_path` set. Step 5 below produces execution-plan.yaml + execution-plan.md as usual, and the resulting tasks flow through plan-passthrough at /start-task time (skill-5 Step 5').
 
 Based on batch schedule, generate:
 
