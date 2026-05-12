@@ -1,0 +1,67 @@
+# Expected output of brainstorm-runner applied to
+# tests/fixtures/prd-bridge/conflict-prd.md.
+#
+# Used as the canonical assertion when skill-1 Phase 0.5 runs.
+# Three ambiguities expected: 2 conflicts (forced escalation) +
+# 1 vague boundary (forced escalation).
+
+ambiguity_report:
+  source_files:
+    - "tests/fixtures/prd-bridge/conflict-prd.md"
+
+  auto_resolved: []
+
+  user_decisions_pending:
+    - id: A1
+      category: cross_story_conflict
+      ambiguity: |
+        US-1 declares single-tenant ('no tenant_id field anywhere').
+        US-2 declares multi-tenant ('every API request carries tenant_id').
+        These are mutually exclusive at the data-model level.
+      options:
+        - label: "single-tenant only"
+          impact: "Drop US-2; remove tenant_id from API contract; per-tenant config table becomes per-instance env"
+        - label: "multi-tenant only"
+          impact: "Drop US-1's 'no tenant_id' guarantee; require tenant scoping on every endpoint"
+        - label: "both modes, switched by deployment flag"
+          impact: "Add SINGLE_TENANT_MODE env; tenant_id required in multi-tenant mode, ignored in single-tenant"
+      recommended: "both modes, switched by deployment flag"
+      rationale: "US-1 and US-2 are equally detailed; PRD Goals lists both as in-scope. A deployment flag preserves both stories."
+
+    - id: A2
+      category: nfr_vs_functional_conflict
+      ambiguity: |
+        NFR-1 requires P95 sync latency under 60s.
+        NFR-2 requires synchronous audit before any state-change response.
+        Audit row write + commit on each sync could push latency over 60s under load.
+      options:
+        - label: "Relax NFR-1 to P95 < 120s when audit required"
+          impact: "Latency goal weakened; documentation update only"
+        - label: "Make audit asynchronous (post-response queue)"
+          impact: "NFR-2 weakened; audit may lag by seconds; ordering not guaranteed"
+        - label: "Optimize audit path (separate connection pool, batch commits)"
+          impact: "Both NFRs preserved; harder implementation; risk of complexity creep"
+      recommended: "Optimize audit path (separate connection pool, batch commits)"
+      rationale: "PRD §2 Goals lists latency reduction as the primary value driver, and Constraints prohibit changing the audit table schema (so async with reorder would require a queue we don't own). Optimization keeps both contracts honest."
+
+    - id: A3
+      category: module_boundary_undefined
+      ambiguity: |
+        'Downstream fulfillment system' is referenced in US-3 ('fulfillment is notified within 60s')
+        and Constraints ('rate limits we don't fully document') but no module / external_dep declaration exists.
+        Cannot determine whether it's an HTTP API, a queue, or a vendor SDK without further input.
+      options:
+        - label: "HTTP REST API (most common; assume polling on rate limit)"
+          impact: "Sync via HTTPS POST; retry loop on 429"
+        - label: "Queue (SQS / RabbitMQ / similar)"
+          impact: "Publish to queue; fulfillment system consumes; no inline rate limit handling"
+        - label: "Vendor SDK (proprietary)"
+          impact: "Bind to vendor library; rate limits handled by SDK; lock-in"
+      recommended: "HTTP REST API (most common; assume polling on rate limit)"
+      rationale: "PRD provides no signal that an MQ or SDK is in play; HTTP is the lowest-assumption fallback. The rate-limit reference (US-3 / Constraints) is consistent with HTTP 429 semantics."
+
+  summary:
+    total_signals_scanned: 8     # nominal — depends on the PRD section depth
+    auto_resolved_count: 0
+    user_pending_count: 3
+    batches_required: 1          # 3 ≤ 8 → one round

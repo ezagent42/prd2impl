@@ -4,8 +4,8 @@
     {
       "name": "prd2impl",
       "source": "./",
-      "description": "PRD-to-Implementation pipeline: 14-skill workflow from requirement analysis to task execution, progress tracking, and milestone verification. Per-scope plans_dir isolation for parallel milestones. design-spec → prd-structure.yaml ingest bridge for superpowers integration.",
-      "version": "0.4.1"
+      "description": "PRD-to-Implementation pipeline — 14 skills for planning, task generation, parallel batch dispatch, and milestone verification. Per-scope plans_dir isolation for parallel milestones. v0.5.0: PRD-entry × superpowers bridge — skill-1 Phase 0.5 ambiguity detection via superpowers:brainstorming; skill-4 Step 4.5 per-task plan generation via superpowers:writing-plans, every task gains source_plan_path → Entry A tasks auto-flow through plan-passthrough.",
+      "version": "0.5.0"
     }
   ],
   "owner": {

@@ -4,6 +4,40 @@ All notable changes to prd2impl are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.5.0 — 2026-05-12
+
+PRD-entry × superpowers bridge. Wires `superpowers:brainstorming` into skill-1 PRD analysis (Phase 0.5) and `superpowers:writing-plans` into skill-4 plan-schedule (Step 4.5). After this release, Entry A tasks (PRD-driven) gain `source_plan_path` at planning time and automatically flow through 0.4.1 plan-passthrough.
+
+Spec: [`docs/superpowers/specs/2026-05-12-prd-entry-superpowers-bridge-design.md`](docs/superpowers/specs/2026-05-12-prd-entry-superpowers-bridge-design.md)
+Plan: [`docs/superpowers/plans/2026-05-12-prd-entry-superpowers-bridge.md`](docs/superpowers/plans/2026-05-12-prd-entry-superpowers-bridge.md)
+
+### Added
+
+- **skill-1 Phase 0.5** — ambiguity detection via `superpowers:brainstorming`. Surfaces cross-story conflicts, NFR-vs-functional contradictions, undefined module boundaries, and implicit external dependencies. Auto-resolves obvious cases; batches genuine ambiguities into rounds of ≤8 questions for user resolution.
+- **skill-1 `lib/brainstorm-runner.md`** — self-driven invocation contract for brainstorming. Defines the framing prompt, the four ambiguity categories, batch sizing, and acceptance criteria.
+- **skill-4 Step 4.5** — per-task plan generation via `superpowers:writing-plans`. For each task in `tasks.yaml`, assembles a spec package (task + relevant prd modules + gap refs + conventions + ambiguity resolutions) and self-drives a writing-plans-format md. Pause-points across all tasks are batched into rounds of ≤8 for user resolution.
+- **skill-4 `lib/plans-runner.md`** — self-driven invocation contract for writing-plans. Defines what's self-driven (file structure, TDD rhythm, code blocks) vs what must pause (irreversible decisions, contradictions, multi-approach choices).
+- **Post-condition contract upgrade**: after `/plan-schedule` returns, every task in `tasks.yaml` has `source_plan_path` set. Entry A tasks now auto-flow through 0.4.1 plan-passthrough (Step 5' delegation, Step 4a subagent prompts, Step 1.5 progress, Step 2.5 plan-vs-actual smoke).
+- **Router truth update**: `using-prd2impl` Call matrix's skill-1 and skill-4 rows now describe actual wiring (via the runner libs), not aspirations.
+
+### Added — Tests / fixtures
+
+- `skills/skill-1-prd-analyze/tests/fixtures/prd-bridge/conflict-prd.md` — test PRD with 2 conflicts + 1 vague module boundary.
+- `skills/skill-1-prd-analyze/tests/expected/conflict-prd.ambiguity-report.yaml` — expected brainstorm-runner output (3 user_decisions_pending).
+- `skills/skill-4-plan-schedule/tests/expected/conflict-prd.sample-plan-md.md` — illustrative sample of plans-runner output.
+
+### Backward compatibility
+
+All changes are graceful. When `superpowers:brainstorming` is not installed, Phase 0.5 is silently skipped. When `superpowers:writing-plans` is not installed, Step 4.5 is silently skipped; tasks fall back to legacy Step 5 type-specific workflow (0.4.x behavior preserved byte-for-byte). Existing `/plan-schedule` outputs (execution-plan.yaml, .md, task-status.md, batch-kickoff.md) remain unchanged in shape.
+
+### Out of scope (deferred)
+
+- skill-2 gap-scan superpowers integration (mechanical scan; no design discussion needed)
+- skill-3 task-gen integration (already handles plan-passthrough in 0.4.1 Step 2.5.0)
+- LLM-driven plan generation as a separate dependency layer
+- Rewriting `execution-plan.yaml` / `batch-kickoff.md` formats
+- skill-13 autorun changes (naturally benefits from per-task source_plan_path)
+
 ## 0.4.1 — 2026-05-12
 
 Plan-passthrough (Option B coarse-grained) × Plan-grounded smoke-test.
