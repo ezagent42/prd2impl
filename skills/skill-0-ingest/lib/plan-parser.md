@@ -21,20 +21,21 @@ A markdown file written in the format produced by `superpowers:writing-plans`. R
 
 Match any line of the form `### Task N: <task-name>` (regex: `^### Task (\d+):\s*(.+)$`). The captured integer becomes `task_index`; the trailing text becomes `name` (trim trailing whitespace; preserve embedded backticks).
 
-For each match, compute `source_plan_anchor` as the GitHub-flavored slug:
+For each match, compute `source_plan_anchor` as the GitHub-flavored slug (matches the anchors GitHub auto-generates for in-page navigation, so a slug computed by this parser equals what a browser would land on when clicking the heading in the rendered md):
 1. Lowercase the full heading text `Task N: <name>` (without the leading `### `).
 2. Replace any whitespace run with a single `-`.
-3. Strip every character that is not in `[a-z0-9-]` (this drops colons, parentheses, brackets, dots, apostrophes, backticks, etc.).
-4. Collapse any `-{2,}` to `-`. Strip leading/trailing `-`.
+3. Strip every character that is not in `[a-z0-9_-]` (i.e., preserve letters, digits, hyphens, AND underscores; drop colons, parentheses, brackets, dots, apostrophes, backticks, plus-signs, slashes, etc.).
+4. Do NOT collapse consecutive `-` characters — GitHub preserves them. Strip leading/trailing `-`.
 
 Examples:
 | Heading | Slug |
 |---|---|
 | `### Task 1: Create package skeleton` | `task-1-create-package-skeleton` |
+| `### Task 1: Create \`change_request\` package skeleton + \`audit.db\` schema` | `task-1-create-change_request-package-skeleton--auditdb-schema` |
 | `### Task 3: Add CR + CRAudit dataclasses + status/source enums` | `task-3-add-cr--craudit-dataclasses--statussource-enums` |
 | `### Task 7: \`POST /api/crs\` endpoint` | `task-7-post-apicrs-endpoint` |
 
-(Note: GitHub's slugger actually preserves consecutive `-` chars rather than collapsing them in some cases. This library collapses them — both forms work as in-file deep-links; the parser's output is the canonical reference.)
+Note the `--` (two hyphens) sequences in the second and third examples: they come from punctuation (`+`, `.`) being stripped between two words that already had hyphens around them. Preserving this matches GitHub's anchor generation byte-for-byte.
 
 ### Rule 2 — Task body boundaries
 
@@ -60,11 +61,11 @@ If a task has no `**Files:**` block, set `files: {create: [], modify: [], test: 
 
 ### Rule 4 — Steps per task
 
-Match lines `- [ ] **Step N:** <description>` OR `- [x] **Step N:** <description>` (regex: `^- \[[ x]\] \*\*Step (\d+):\*\*\s*(.+)$`). The checkbox state is NOT recorded by this rule — Rule 4 only extracts step metadata. (Checkbox state is read by skill-9 for progress; it does its own counting.)
+Match lines `- [ ] **Step N: <description>**` OR `- [x] **Step N: <description>**` (regex: `^- \[[ x]\] \*\*Step (\d+):\s*(.+?)\*\*\s*$`). The whole step heading is bolded — the closing `**` is at end-of-line. The checkbox state is NOT recorded by this rule — Rule 4 only extracts step metadata. (Checkbox state is read by skill-9 for progress; it does its own counting.)
 
 Capture:
 - `step_index`: the integer N
-- `description`: the text after `**Step N:**` on the same line, trimmed (multi-line descriptions are NOT supported; only the first line is captured)
+- `description`: the text between `**Step N:` and the closing `**`, trimmed (multi-line descriptions are NOT supported; only the first line is captured)
 
 For each step body (text between this step's bullet and the next `- [ ] **Step ` / `- [x] **Step `, or `### Task `, or `## ` heading — whichever comes first):
 - `has_code_block`: true if any line in the body begins with ` ```` ` (three backticks, optionally followed by a language identifier)
