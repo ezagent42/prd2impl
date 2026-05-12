@@ -4,7 +4,7 @@ All notable changes to prd2impl are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — 0.4.1
+## 0.4.1 — 2026-05-12
 
 Plan-passthrough (Option B coarse-grained) × Plan-grounded smoke-test.
 Makes writing-plans-format markdown plans first-class prd2impl input,
