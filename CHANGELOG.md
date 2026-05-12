@@ -4,6 +4,119 @@ All notable changes to prd2impl are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — 0.4.1
+
+Plan-passthrough (Option B coarse-grained) × Plan-grounded smoke-test.
+Makes writing-plans-format markdown plans first-class prd2impl input,
+without YAML round-trip information loss. The 8 admin-v2 plans at
+`AutoService/docs/superpowers/plans/2026-05-11-admin-v2-*.md` (and any
+other writing-plans-format md) can now be ingested → task-genned → started
+→ smoke-tested end-to-end. Execution delegates to
+`superpowers:subagent-driven-development` / `executing-plans`, which
+consume the plan natively — prd2impl does NOT re-encode plan steps.
+
+Plan: [`docs/superpowers/plans/2026-05-12-plan-passthrough.md`](docs/superpowers/plans/2026-05-12-plan-passthrough.md)
+
+### Granularity choice — Option B (coarse-grained)
+
+This release implements **1 prd2impl task = 1 plan file**. A finer-grained
+mapping (1 plan-task = 1 prd2impl task, with plan-slicing at execution
+time) was considered and deferred — `superpowers:executing-plans` v5.1.0
+takes no CLI args, so slicing would require either a plan-slicer (write
+a temp md) or an upstream PR. Revisit if intra-plan parallel dispatch
+becomes a real need.
+
+### Added
+
+- **skill-0 role-detector**: Signal 0 — writing-plans header override
+  (`REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development` or
+  `... executing-plans` in first 30 lines → role=plan, confidence=100,
+  short-circuits the 4-signal heuristic).
+- **skill-0 lib/plan-parser.md** (new): shared library that extracts
+  `{Task N → Files{Create,Modify,Test,Delete} → Steps[]}` hierarchy from
+  writing-plans-format markdown. Six parsing rules cover discovery,
+  body boundaries, Files block, Steps, idempotence, refusal on malformed
+  input. Used by skill-0, skill-8, skill-9, skill-10.
+- **skill-0 spec-extractor.md**: Phase 0 (new) delegates writing-plans
+  md to plan-parser; legacy file_changes/steps extraction skipped on
+  this path. Legacy plans without the writing-plans header still flow
+  through Steps 1-7 unchanged.
+- **schema task-hints.yaml**: gains a `tasks[]` property carrying
+  per-plan-task hierarchy (`task_index`, `name`, `source_plan_path`,
+  `source_plan_anchor`, `files`, `steps`). Optional — absent for
+  design-spec / prd / gap / user-stories roles.
+- **schema task-hints.example.yaml**: refreshed with `tasks[]` example
+  derived from admin-v2 p1.
+- **skill-3 task-gen Step 2.5.0** (new): plan-passthrough plan-file
+  mapping. When `task_hints.tasks[]` is present, emits ONE prd2impl
+  task per unique `source_plan_path`, aggregating
+  `files{create,modify,test}` across all plan-tasks in the file.
+  Task ID follows the plan-letter pattern (T1, T4A, T6B, ...).
+  Legacy Behaviors 1/2/3 still run for ingest without `tasks[]`.
+- **skill-5 start-task Step 5'** (new): plan-passthrough execution.
+  Detects `source_plan_path` on the task and delegates the WHOLE plan
+  to `superpowers:subagent-driven-development` (preferred) or
+  `superpowers:executing-plans` (fallback). No CLI flags, no slicing.
+  Forwards `--autopilot={level}` to the delegated skill.
+- **skill-8 batch-dispatch Step 4a** (new): plan-passthrough prompt
+  block REPLACES the legacy Type-Specific Workflow lines when the
+  dispatched task has `source_plan_path`. The subagent invokes
+  `superpowers:subagent-driven-development` on the source plan inside
+  its worktree; prd2impl does NOT inline verbatim plan steps into the
+  prompt (the writing-plans format is purpose-built for the superpowers
+  skills to consume directly — re-encoding would duplicate the contract).
+  Pre-flight: plan-parser sanity-checks the plan before dispatch.
+- **skill-9 task-status Step 1.5** (new): per-plan step progress.
+  Reads `source_plan_path` and counts `- [ ]`/`- [x]` across the whole
+  plan file to derive `step_progress = {checked}/{total}` and
+  `plan_task_progress = {done}/{total}`. Surfaced in the Active Tasks
+  table's Duration column.
+- **skill-10 smoke-test Step 2.5** (new): plan-vs-actual file structure
+  check. For any milestone with plan-passthrough tasks, cross-checks
+  per-plan-task `files{create,modify}` (from task-hints.yaml) against
+  `git diff` vs base branch. `missing_create` and
+  `declared_modify_not_modified` contribute NO-GO; `unexpected_create`
+  and `unexpected_modify` contribute CONDITIONAL GO. Report breaks down
+  per plan-task (`T1 / plan-task-1`, `T1 / plan-task-2`, …) for
+  granularity.
+
+### Added — Tests / fixtures
+
+- `skills/skill-0-ingest/tests/fixtures/plan-passthrough/admin-v2-p1-cr-data-layer.md` —
+  canonical 14-task / 90-step writing-plans-format fixture (copy of the
+  AutoService admin-v2 p1 plan).
+- `skills/skill-0-ingest/tests/expected/admin-v2-p1.task-hints.yaml` —
+  expected plan-parser output (14 tasks, 90 steps, 25 create + 14
+  modify file declarations).
+- `skills/skill-0-ingest/tests/fixtures/plan-passthrough/_gen_expected.py` —
+  one-shot generator that embeds the parsing rules in Python and
+  produces the expected fixture. Regen via
+  `python3 skills/skill-0-ingest/tests/fixtures/plan-passthrough/_gen_expected.py`.
+
+### Designed for
+
+The 8 admin-v2 plans at `AutoService/docs/superpowers/plans/2026-05-11-admin-v2-*.md`
+become 8 prd2impl tasks (T1, T2, T3, T4A, T4B, T5, T6A, T6B). Run
+`/ingest-docs <plans>` → `/task-gen` → `/start-task T1` (or
+`/batch-dispatch T1,T2,...`) → `/smoke-test` end-to-end without
+information loss between stages.
+
+### Backward compatibility
+
+All changes are additive. Tasks without `source_plan_path` behave
+byte-for-byte identical to 0.4.0. Plans that don't use the writing-plans
+header are still parsed by the legacy step-extraction flow.
+
+### Out of scope (deferred follow-ups)
+
+- Option A (fine-grained 1 plan-task → 1 prd2impl task) — would require
+  a plan-slicer at start-task time or an upstream PR to
+  `superpowers:executing-plans` adding a `--task-anchor` arg. Schema and
+  parser already carry the per-plan-task hierarchy needed.
+- `/next-task` parallel-sibling suggester (improvement #4 from the
+  evaluation that produced this plan).
+- skill-12 `/contract-check` cross-plan symbol graph (improvement #6).
+
 ## 0.4.0 — 2026-05-09
 
 Skill-chain wiring + framework-learning loop. Connects prd2impl's
