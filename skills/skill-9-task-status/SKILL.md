@@ -54,6 +54,20 @@ Display a comprehensive progress dashboard with statistics, visualizations, and 
    a failure). This is the metric the AutoService team has been
    re-discovering manually after every milestone.
 
+### Step 1.5: Plan-passthrough progress (0.4.1+, Option B coarse-grained)
+
+For each task with `source_plan_path` (and status `in_progress`):
+
+1. Open `{source_plan_path}` (a markdown file at the repo-relative path).
+2. Count `- [ ]` (unchecked) and `- [x]` (checked) bullets across the WHOLE file (the prd2impl task = the whole plan file under Option B).
+3. Also count `### Task N:` headings to get plan-task count. For each plan-task body, classify it as "fully-checked" when it contains zero `- [ ]` AND at least one `- [x]`.
+4. Compute `step_progress: {checked}/{total}` AND `plan_task_progress: {fully-checked-plan-tasks}/{total-plan-tasks}`. Attach both to the task's in-memory record.
+5. Use this in Step 4's Active Tasks table: render the Duration column as `2h (12/30 steps, 3/8 plan-tasks)` instead of just `2h`.
+
+If `{source_plan_path}` is missing, fall back to no step progress (no error — just absent). The task-level status still reflects the tasks.yaml entry.
+
+**Why this matters**: a plan-passthrough task can encompass dozens of checkbox steps across many plan-tasks. The operator wants to know "is T1 halfway done or just starting?" The plan md is authoritative — its checkboxes are mechanically ticked by `superpowers:subagent-driven-development` / `executing-plans` as work progresses (skill-5 Step 5'.3).
+
 ### Step 2: Compute Statistics
 
 ```yaml
@@ -127,6 +141,7 @@ P5 zchat        ████░░░░░░  31% (4/13)  ⚠️ 9 blocked
 | Task | Name | Owner | Duration | Status |
 |------|------|-------|----------|--------|
 | T3B.7 | Management chat | Dev1 | 2h | 🟦 in progress |
+| T1    | Admin V2 P1 — CR data layer | Dev2 | 1h 20m (12/30 steps, 3/8 plan-tasks) | 🟦 plan-passthrough |
 
 ## Blocked Tasks
 | Task | Blocker | Impact |
