@@ -205,7 +205,7 @@ The lib files exist to **document the contract**. The actual superpowers skills 
 
 | Fixture | Assertion |
 |---|---|
-| Test PRD with 2 conflicting user stories + 1 vague NFR (`tests/fixtures/prd-bridge/conflict-prd.md`) | skill-1 Phase 0.5 emits 2 ambiguities (not 0, not 3). |
+| Test PRD with 2 conflicting user stories + 1 vague module boundary (`tests/fixtures/prd-bridge/conflict-prd.md`) | skill-1 Phase 0.5 emits 3 ambiguities (A1 cross-story, A2 NFR-vs-functional, A3 module-boundary). |
 | Same PRD → full pipeline through `/plan-schedule` | Every task in `tasks.yaml` has `source_plan_path`. Every plan-md parses with `lib/plan-parser.md` and returns ≥1 task / ≥3 step. |
 | `--skip-plan-gen` flag on `/plan-schedule` | tasks.yaml has no `source_plan_path` (forced legacy behavior). |
 | superpowers uninstalled | Full chain runs without errors; behaves byte-for-byte like 0.4.x. |
