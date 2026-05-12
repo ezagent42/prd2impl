@@ -1,13 +1,29 @@
 # spec-extractor — Phase 2b of skill-0-ingest
 
-Extract structured design decisions from a Markdown document classified as `role: design-spec`.
+Extract structured design decisions from a Markdown document classified as `role: design-spec` or `role: plan`.
 Produces the `task_hints` object that becomes `task-hints.yaml`.
 
 ## Input
 
-- One or more MD files with `detected_role: design-spec` from role-detector.
+- One or more MD files with `detected_role: design-spec` or `detected_role: plan` from role-detector.
 
 ## Extraction steps
+
+## Phase 0 — Plan-format detection (role=plan only)
+
+**Triggers when**: the calling skill (skill-0-ingest Phase 2b plan branch) passes in a file with `detected_role: plan`.
+
+**Step 0.1**: Check whether the file is writing-plans-format. Scan the first 30 lines for the literal substring `REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development` OR `REQUIRED SUB-SKILL: Use superpowers:executing-plans`. (This is the same signature role-detector Signal 0 uses; both checks must stay in sync. If role-detector classified the file as `plan` via Signal 0, this check necessarily passes — the redundancy is intentional and cheap.)
+
+**Step 0.2** (match): Delegate to `lib/plan-parser.md`. Pass the file bytes; receive the parsed `tasks[]` list. Then:
+- Set `task_hints.tasks` = the parsed list.
+- For each entry in `task_hints.tasks`, populate `source_plan_path` with the input file's repo-relative path (the parser leaves this null — only the caller knows the path).
+- Set `task_hints.source_files = [path]` and `task_hints.source_type = "ingested"`.
+- SKIP Steps 1-7 below. file_changes / implementation_steps / non_goals / test_strategy / risks are NOT extracted in the plan-passthrough path — the rich data lives inside `task_hints.tasks[].files` and `.steps` instead.
+
+**Step 0.3** (no match): Continue with the legacy flow (Steps 1-7 below). This preserves backward compatibility with hand-written plan-shaped markdown that does NOT follow writing-plans format.
+
+---
 
 ### Step 1 — Locate section anchors
 
@@ -187,3 +203,11 @@ Expected output assertions:
 - `len(risks) >= 1`
 
 See `tests/expected/clear-spec.task-hints.yaml` for the expected YAML.
+
+## Plan-format passthrough (cross-reference)
+
+When the caller's `detected_role` is `plan` and Phase 0 above matches the writing-plans signature, ALL `tasks[]` extraction happens in `lib/plan-parser.md` — this file is a no-op for steps / file_changes / non_goals / test_strategy / risks. The output is `task_hints.tasks[]` (rich per-plan-task hierarchy with files / steps), not the legacy `task_hints.file_changes` / `task_hints.implementation_steps` layout.
+
+Legacy plans without the writing-plans header still flow through Steps 1-7 — they get the legacy layout, no `tasks[]` field.
+
+Acceptance test for the plan-passthrough path: applying spec-extractor (Phase 0) to `tests/fixtures/plan-passthrough/admin-v2-p1-cr-data-layer.md` must produce a `task_hints` object that, when serialized, equals `tests/expected/admin-v2-p1.task-hints.yaml` byte-for-byte. Regenerate the expected fixture via `python3 tests/fixtures/plan-passthrough/_gen_expected.py`.
