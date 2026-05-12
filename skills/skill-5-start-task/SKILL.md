@@ -35,6 +35,7 @@ Launch a specific task, verify its prerequisites, update the status tracker, and
 1. Find the task by ID in `tasks.yaml` or fallback to markdown files
 2. Extract: name, type, phase, dependencies, deliverables, verification criteria
 3. If task not found, list similar task IDs and ask user to clarify
+4. **Plan-passthrough detection (0.4.1+)**: if the task entry in `tasks.yaml` has `source_plan_path` (no anchor — Option B operates at plan-file granularity), mark this task as "plan-passthrough mode" and SKIP the legacy Step 5 type-specific workflow. Plan-passthrough mode runs Step 5' below.
 
 ### Step 2: Dependency Check
 
@@ -110,6 +111,60 @@ catches this **before** code is written. See spec §5 P0-2.
 (skill-12 missing or older prd2impl install without the `--preflight`
 subcommand), emit a logged warning and proceed. Document the risk to
 the user once per session.
+
+### Step 5' — Plan-Passthrough Execution (0.4.1+, when source_plan_path present)
+
+When Step 1.4 marked the task as plan-passthrough mode, the execution model is "load the whole plan and run it" — delegate to `superpowers:subagent-driven-development` (preferred, when subagents are available) or `superpowers:executing-plans` (fallback). This skill operates at plan-FILE granularity (Option B): one prd2impl task = one plan file. Intra-plan sequencing (the `### Task 1`, `### Task 2`, ... headings within the source md) is handled by the chosen superpowers skill; prd2impl does not slice the plan.
+
+#### Step 5'.1 — Verify the source plan still exists
+
+```bash
+test -f {source_plan_path} && echo OK || echo "MISSING source plan"
+```
+
+If MISSING, halt and ask the user to either restore the file or remove `source_plan_path` from the task entry (which degrades the task to legacy Step 5 below).
+
+#### Step 5'.2 — Verify the plan is still parseable
+
+Apply `skill-0-ingest/lib/plan-parser.md` to `{source_plan_path}`. If the parser returns `error: "not-a-plan"` or `error: "plan-without-tasks"`, halt and surface the parser's error to the user. The plan may have been hand-edited into an unparseable state.
+
+If the parsed task count differs from the `source_plan_task_count` recorded in `tasks.yaml`, emit a WARN: "plan task count drifted ({recorded} → {current}); consider re-running /ingest-docs to refresh task-hints.yaml." Proceed — drift alone is not blocking.
+
+#### Step 5'.3 — Delegate execution to superpowers
+
+**Preferred path — `superpowers:subagent-driven-development` is installed**:
+
+Invoke it. The skill expects no CLI args; it operates on the plan currently in context. From this skill, the invocation is:
+
+1. Announce: "Delegating task {task_id} to superpowers:subagent-driven-development on plan {source_plan_path}."
+2. Read the plan into context.
+3. Invoke the subagent-driven-development skill, with the plan path implicitly as its starting context.
+
+The subagent-driven-development skill iterates the plan's `### Task N:` headings, dispatches a fresh subagent per plan-task, runs two-stage review between tasks, and ticks each `- [ ]` checkbox in the source plan md as steps complete.
+
+**Fallback — only `superpowers:executing-plans` is installed**:
+
+Invoke it. Same shape — no CLI args; the skill operates on the plan currently in context. It runs all plan-tasks sequentially in this session, with TodoWrite-based tracking and checkpoint pauses.
+
+**Final fallback — neither superpowers skill installed**:
+
+Log a warning: "plan-passthrough cannot execute step-by-step without `superpowers:executing-plans` or `superpowers:subagent-driven-development`. Falling back to legacy Step 5 type-specific workflow." Then jump to the existing Step 5 below. The user can install superpowers and retry.
+
+#### Step 5'.4 — Task completion
+
+When the delegated skill reports completion (all `### Task N:` blocks in the source plan have all their `- [ ]` boxes ticked), mark the prd2impl task `completed` in `tasks.yaml` AND in `task-status.md`. Commit message format:
+
+```
+task: {task_id} → completed (plan-passthrough; {N}/{N} plan-tasks done, {S}/{S} steps)
+```
+
+Where `N = source_plan_task_count` from tasks.yaml, `S = source_plan_step_count`.
+
+#### Step 5'.5 — Autopilot interaction
+
+If `--autopilot={level}` was passed to /start-task, persist it (per existing Autopilot Mode section below) AND prefix the announcement with a note for the delegated skill: "Autopilot level: {level} — apply your own auto-proceed rules within this plan." The two superpowers skills have their own interpretation of autopilot semantics; prd2impl just forwards the level.
+
+---
 
 ### Step 5: Enter Type-Specific Workflow
 
@@ -212,6 +267,8 @@ Next step: {what's happening / what we're waiting for}
 🟦 in_progress → ⚠️ blocked   (if blocker discovered)
 🟦 in_progress → 🟥 failed    (if rejected, needs redo)
 ```
+
+> Plan-passthrough tasks (with `source_plan_path`) transition via Step 5'. Per-step progress is recorded as `- [x]` ticks in the source plan md, not in task-status.md — skill-9 task-status reads those ticks for the dashboard.
 
 ## Error Handling
 
