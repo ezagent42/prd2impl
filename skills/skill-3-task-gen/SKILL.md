@@ -177,7 +177,96 @@ tasks:
 
 **Gate**: Skip this entire step if no `task-hints.yaml` was found in Step 1. When absent, task generation is byte-identical to before this change was made.
 
-When `task-hints.yaml` is present, apply three behaviors that override the defaults in Step 2:
+When `task-hints.yaml` is present, FIRST check for the plan-passthrough short-circuit (Step 2.5.0). If it fires, the Behavior 1/2/3 logic below does NOT apply. Otherwise, apply the three behaviors that override defaults in Step 2.
+
+#### Step 2.5.0 — Plan-passthrough mapping (Option B, coarse-grained — 0.4.1+)
+
+**Triggers when**: `task_hints.source_type == "ingested"` AND `task_hints.tasks[]` is present and non-empty AND every entry in `tasks[]` carries a `source_plan_path`.
+
+When triggered, use the plan-file mapping below INSTEAD of Behaviors 1/2/3 below. The legacy file_changes / implementation_steps logic remains the default for design-spec ingest and hand-written plans without the writing-plans header.
+
+##### Emission rule — one task per plan FILE
+
+Group `task_hints.tasks[]` by `source_plan_path`. For each unique plan-file group, emit exactly one prd2impl task to `tasks.yaml`:
+
+```yaml
+- id: "{see ID rule}"
+  name: "{see name rule}"
+  type: green                              # default; see type-inference rule
+  phase: "{see phase rule}"
+  module: ""                                # plan itself is the module
+  source_plan_path: "{unique plan path for this group}"
+  source_plan_task_count: {count of entries in this group}
+  source_plan_step_count: {sum of len(steps) across the group}
+  deliverables:
+    # aggregated across all plan-tasks in the group, de-duplicated by path
+    - path: "{path}"
+      change_type: "create | modify"
+  verification:
+    - "All checkbox steps in {source_plan_path} are checked (executing-plans tick state)"
+    - "git diff vs base branch matches the plan's aggregated File Structure (see skill-10 Step 2.5)"
+  depends_on: []                            # see dependency-inference rule
+```
+
+Note: prd2impl tasks emitted via Step 2.5.0 do NOT carry `source_plan_anchor` (no anchor — the whole plan is the unit). The per-plan-task anchors, files, and step counts stay in `task-hints.yaml` and are read directly by skill-9 / skill-10.
+
+##### Aggregation rule for deliverables
+
+For each unique `source_plan_path`:
+- Union `files.create` across all `tasks[]` entries → `change_type: create`.
+- Union `files.modify` across all entries → `change_type: modify`.
+- Union `files.test` and merge into `create` if the test path is a new file under `tests/`, else into `modify`.
+- De-duplicate by `path`. If a file appears in both create and modify across different plan-tasks, prefer `create`.
+
+##### ID rule
+
+Match the plan filename pattern `\d{4}-\d{2}-\d{2}-(?:[a-z0-9-]+-)?p(\d+)([a-z]?)-.+\.md` to extract the plan-letter:
+
+- `*-p1-*.md` → `T1`
+- `*-p2-*.md` → `T2`
+- `*-p4a-*.md` → `T4A`
+- `*-p4b-*.md` → `T4B`
+- `*-p6a-*.md` → `T6A`
+
+If the filename does NOT match the `p\d+[a-z]?` pattern, fall back to `TP{1-based ordinal of plan in input list}` (e.g. `TP3` for the 3rd plan).
+
+##### Name rule
+
+Use the plan's H1 with the trailing `Implementation Plan` stripped. Fall back to the filename stem (with date prefix stripped) if the H1 is missing or generic.
+
+##### Phase rule
+
+If `project.yaml` defines `phases[]`, match the plan-letter to a phase (e.g. `p1` → phase `P1`). If no match, set `phase: "ingested"`.
+
+##### Type-inference rule
+
+Default: `type: green`. The granularity is now plan-level — most plans bundle a mix of green/yellow/red work. Default to green and let the user re-classify in `tasks.yaml` if needed. Exception: if the plan filename or H1 mentions `design`, `policy`, `decision`, `architecture`, default to `red` (these plans typically front-load design decisions).
+
+##### Dependency-inference rule
+
+For each emitted task, order by plan-letter (p1 < p2 < p3 < p4a < p4b < p5 < p6a < p6b — natural ordering by digit then letter suffix). Set `depends_on: ["T{prev-plan-letter}"]` if a prev plan was ingested in the same call. Sequential chaining is the safe default — the user edits `tasks.yaml` afterward for non-linear deps.
+
+Print a hint at end of generation:
+
+```
+Cross-plan dependencies inferred sequentially (T2 depends on T1, T3 on T2, ...).
+Review tasks.yaml depends_on if your plans have non-linear deps.
+```
+
+##### What is NOT done in plan-passthrough mode
+
+- No `gap-analysis.yaml` cross-referencing (writing-plans format does not carry GAP-NNN refs)
+- No NFR mapping (plans encode "how", not "what" — NFRs come from prd-structure)
+- No intra-plan parallelism (executing-plans / subagent-driven-development runs plan-tasks sequentially within one plan; cross-plan parallelism still works via batch-dispatch)
+- No batch packing (skill-4-plan-schedule does that)
+
+##### When this step fires, skip Behaviors 1/2/3 below
+
+The legacy file_changes / implementation_steps / non_goals logic is not applicable: writing-plans format doesn't use those fields. Continue to Step 2.6 (house conventions) after this step.
+
+---
+
+> **Branching note**: the three Behaviors below run ONLY when Step 2.5.0 did NOT fire (i.e., `task_hints` carries legacy file_changes / implementation_steps but no `tasks[]`). For plan-passthrough hints, Step 2.5.0 fully replaces them.
 
 #### Behavior 1 — Deliverables come from file_changes
 
