@@ -86,6 +86,88 @@ Result: 16/17 complete — FAIL (1 task remaining)
 
 If any tasks are not complete, report and ask whether to proceed with partial verification.
 
+### Step 2.5: Plan-vs-Actual File Structure Check (0.4.1+, Option B coarse-grained)
+
+**Triggers when**: at least one task in the milestone has `source_plan_path` in its `tasks.yaml` entry.
+
+For each such task, read the matching `task-hints.yaml` entries (rich per-plan-task data) to extract per-plan-task `files.create` + `files.modify` lists. If `task-hints.yaml` is missing or out of sync, re-parse the plan with `skill-0-ingest/lib/plan-parser.md` (Rule 3) as a fallback. Cross-check against actual git history.
+
+The report breaks down to per-PLAN-TASK rows (e.g. `T1 / plan-task-1`, `T1 / plan-task-2`) for granularity, even though the prd2impl task is plan-FILE level. This is the "richness preserved" half of the plan-passthrough deal — task_hints.yaml is the source of truth for that richness.
+
+#### Step 2.5.1 — Build the declared set per plan-task
+
+For each prd2impl task `T` with `source_plan_path = P`:
+- Lookup the `task_hints.tasks[]` entries whose `source_plan_path == P` (these are the plan-tasks within this prd2impl task).
+- For each such entry `pt` (1-based index `i`), record:
+  - `declared_create[T/pt_i] = pt.files.create`
+  - `declared_modify[T/pt_i] = pt.files.modify`
+
+If `task-hints.yaml` cannot be located (e.g. ingest-docs was never run or task-hints was deleted), parse `P` directly with plan-parser and use the parsed `tasks[]`. Surface a WARN: "task-hints.yaml not found for {P}; re-parsed plan at smoke-test time (slower; please regenerate via /ingest-docs)."
+
+#### Step 2.5.2 — Build the actual set (one-shot, scoped to base branch)
+
+```bash
+git diff --name-status {base_branch}...HEAD | awk '$1 == "A" { print $2 }'    # actually created
+git diff --name-status {base_branch}...HEAD | awk '$1 == "M" { print $2 }'    # actually modified
+```
+
+Define:
+- `actual_create` = the "A" set
+- `actual_modify` = the "M" set
+- (also note: "D" = deleted, "R..." = renamed — handle as their own row class)
+
+The actual set is computed ONCE for the whole milestone (not per-plan-task) — it's the cumulative diff vs the milestone's base branch.
+
+#### Step 2.5.3 — Compute the four delta sets per plan-task
+
+For each `T/pt_i` row built in Step 2.5.1:
+
+| Delta | Definition | Severity |
+|---|---|---|
+| `missing_create` | `declared_create[T/pt_i] ∩ NOT(actual_create)` | NO-GO (declared file does not exist) |
+| `unexpected_create` | `actual_create - ⋃(declared_create across all T/pt_i)` | WARN (file created outside any plan; reported ONCE at milestone level, not per-plan-task) |
+| `declared_modify_not_modified` | `declared_modify[T/pt_i] ∩ NOT(actual_modify ∪ actual_create)` | NO-GO (plan said to modify but no diff) |
+| `unexpected_modify` | `actual_modify - ⋃(declared_modify across all T/pt_i)` | WARN (modification outside any plan; reported ONCE at milestone level) |
+
+`declared_modify_not_modified` subtracts `actual_create` because a file declared as "modify" but actually created from scratch in this milestone is a NAMING mismatch, not a missing change — surface it as a WARN with hint "plan said modify; actual was create — was this file new this milestone?"
+
+#### Step 2.5.4 — Build the report block
+
+Add a new section to the gate report (Step 6):
+
+```markdown
+## Plan vs Actual File Structure
+
+Each prd2impl task with `source_plan_path` is broken down to its plan-tasks
+(read from task-hints.yaml). The "Plan-Task" column shows `{prd2impl-task} /
+plan-task-{N}` where N is the 1-based ordinal within the plan.
+
+| Plan-Task | Status | Declared (C/M) | Actual (C/M) | Delta |
+|-----------|--------|----------------|--------------|-------|
+| T1 / plan-task-1 | ✅ | 5/0 | 5/0 | none |
+| T1 / plan-task-2 | ❌ | 2/3 | 2/1 | declared_modify_not_modified: api_routes.py, auth.py |
+| T1 / plan-task-4 | ⚠️ | 1/2 | 3/2 | unexpected_create: helpers/utils.py, helpers/__init__.py |
+
+### Blocking deltas (NO-GO contributors)
+- T1 / plan-task-2: declared but missing modify on `autoservice/api_routes.py`
+- T1 / plan-task-2: declared but missing modify on `autoservice/auth.py`
+
+### Warning deltas (CONDITIONAL GO contributors)
+- T1 / plan-task-4: unexpected create `helpers/utils.py` — scope creep or incidental?
+```
+
+#### Step 2.5.5 — Gate-decision contribution
+
+- Any `missing_create` row → contributes a NO-GO to the milestone gate.
+- Any `declared_modify_not_modified` row → contributes a NO-GO.
+- `unexpected_create` and `unexpected_modify` rows are WARNINGs only — they contribute a CONDITIONAL GO if no NO-GO is otherwise present.
+
+#### Step 2.5.6 — Graceful degradation
+
+If NO tasks in the milestone have `source_plan_path`, skip this step entirely (silent — no warning). The milestone may simply not be a plan-passthrough milestone.
+
+If a task has `source_plan_path` but the file is missing, surface a CONDITIONAL GO with the diagnostic "plan file missing — cannot verify file structure" and proceed with Step 3.
+
 ### Step 3: Automated Test Verification
 
 #### Primary path (when dev-loop-skills is installed)
@@ -208,6 +290,7 @@ NO-GO regardless of how the new tests perform.
 | Check | Result | Details |
 |-------|--------|---------|
 | Task completion | ✅ PASS | 17/17 tasks completed |
+| Plan vs Actual files | ✅ PASS | (0.4.1+) 0 missing_create, 0 declared_not_modified, 1 unexpected_create (WARN) |
 | Automated tests | ✅ PASS | 42 tests, 0 failures |
 | Contract tests | ✅ PASS | 109 cases, all green |
 | Artifact completeness | ⚠️ WARN | 2 artifacts missing (non-critical) |

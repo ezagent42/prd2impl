@@ -16,7 +16,23 @@ Produce a confirmation table for human review before extraction begins.
 
 ## Scoring algorithm
 
-For each input file, compute a confidence score 0–100 across four signals:
+For each input file, FIRST check the writing-plans override (Signal 0). If it fires, the file is classified as `role: plan, confidence: 100` and the 4-signal scoring below is skipped. Otherwise, run the 4-signal heuristic.
+
+### Signal 0 — Writing-plans format override (highest confidence, 100 points)
+
+Scan the FIRST 30 lines of the file for either of these literal substrings:
+
+- `REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development`
+- `REQUIRED SUB-SKILL: Use superpowers:executing-plans`
+
+This is the canonical writing-plans header emitted by `superpowers:writing-plans`. Its presence means the file was authored to be consumed by `superpowers:executing-plans` or `subagent-driven-development` — i.e., the plan-passthrough path.
+
+If either substring is present:
+- Return `role: plan, confidence: 100, evidence: "writing-plans header detected"` immediately.
+- SKIP signals 1-4 entirely.
+- Downstream (skill-0 Phase 2b) will route to `lib/plan-parser.md` instead of the legacy implementation_steps extractor.
+
+If neither substring is present, fall through to the 4-signal heuristic below. A hand-written plan that lacks the writing-plans header can still score `role: plan` via signals 1-3, but it will go through the legacy spec-extractor flow rather than plan-parser.
 
 ### Signal 1 — Filename (30 points)
 
@@ -75,6 +91,10 @@ Add all matching points, cap at 20.
 
 ### Final score
 
+If Signal 0 fired, final_score = 100 and role = plan (short-circuited above).
+
+Otherwise:
+
 ```
 final_score = signal1 + signal2 + signal3 + signal4
 role = the hint that contributed most points (sum per role hint)
@@ -108,13 +128,14 @@ Merge: `merged_score = max(heuristic_score, llm_confidence)`. Role from the high
 ## Execution steps
 
 1. For each input file path:
-   a. Compute signal 1 from filename.
-   b. Read file; parse frontmatter → signal 2.
-   c. Read first 50 lines → signal 3.
-   d. Scan full document → signal 4.
-   e. Sum → `heuristic_score`, identify `role`.
-   f. If `heuristic_score < 70`: invoke LLM fallback; merge.
-   g. Store `{path, detected_role, confidence, evidence}`.
+   a. **Signal 0 (override)**: read first 30 lines; if writing-plans header substring present, store `{detected_role: "plan", confidence: 100, evidence: "writing-plans header"}` and SKIP steps b-f for this file.
+   b. Compute signal 1 from filename.
+   c. Read file; parse frontmatter → signal 2.
+   d. Read first 50 lines → signal 3.
+   e. Scan full document → signal 4.
+   f. Sum → `heuristic_score`, identify `role`.
+   g. If `heuristic_score < 70`: invoke LLM fallback; merge.
+   h. Store `{path, detected_role, confidence, evidence}`.
 
 2. Check `--tag` overrides from CLI: for each `--tag role=path`, force `detected_role = role`, `confidence = 100`.
 

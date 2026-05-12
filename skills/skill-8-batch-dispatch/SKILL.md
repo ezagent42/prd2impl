@@ -174,6 +174,9 @@ For all tasks that pass pre-flight:
 
 ### Step 4: Construct Agent Prompts
 
+> **Branching note (0.4.1+)**: when a task has `source_plan_path` in its tasks.yaml entry, run **Step 4a — Plan-Passthrough block** instead of the legacy Type-Specific Workflow lines. Step 4a is documented immediately after this Step 4. All other prompt sections (Task Definition, Context Files, File Boundaries, Mock discipline) still apply.
+
+
 For each task, build a self-contained prompt that includes all context the agent needs:
 
 ```python
@@ -220,6 +223,56 @@ You are working on task {task_id} ({task_name}) in the {project_name} project.
 - Both stages run via superpowers:requesting-code-review.
 """
 ```
+
+### Step 4a: Plan-Passthrough block (0.4.1+, when source_plan_path present)
+
+When the task being dispatched has `source_plan_path` in its `tasks.yaml` entry, REPLACE the "Type-Specific Workflow" portion of the agent prompt with the block below. The subagent delegates execution to `superpowers:subagent-driven-development` (preferred) or `superpowers:executing-plans` (fallback), which handles per-step TDD discipline internally — skill-8 does NOT inject step-level instructions itself.
+
+**Step 4a.1**: Before dispatch, run `skill-0-ingest/lib/plan-parser.md` against `{source_plan_path}` as a sanity check. If the parser returns an error (`not-a-plan` / `plan-without-tasks`), do NOT dispatch — surface the parser error to the user instead. This prevents launching a subagent at a malformed plan.
+
+**Step 4a.2**: Construct this block and use it INSTEAD of the green/yellow workflow lines in the prompt_template:
+
+````
+## Plan-Passthrough Execution
+
+Your task is plan-passthrough mode. The source plan lives at `{source_plan_path}`. It is a writing-plans-format implementation plan with `### Task N:` headings and `- [ ] **Step M: <description>**` checkboxes. Your job is to execute the WHOLE plan end-to-end inside your isolated worktree.
+
+### Required workflow
+
+1. Read the source plan in full: `{source_plan_path}`.
+2. Invoke `superpowers:subagent-driven-development` on it. If subagent-driven-development is not available, invoke `superpowers:executing-plans` instead. If neither is available, STOP and report — do NOT improvise step execution.
+3. The chosen superpowers skill enforces:
+   - One step at a time (the plan's `- [ ]` checkbox rhythm)
+   - TDD discipline (write failing test → run, verify FAIL → write minimal impl → run, verify PASS → commit)
+   - Verbatim execution of `Run: <cmd>` lines with actual output reporting
+   - Commit cadence as the plan declares
+4. Tick `- [x]` boxes in the source plan md AS YOU GO (the superpowers skill does this; do not skip it — the prd2impl progress dashboard reads these ticks for the `step_progress` metric).
+
+### Hard rules (apply ON TOP of the superpowers skill's discipline)
+
+- **Worktree scope**: only modify files this prd2impl task's `deliverables[]` declares, OR files the source plan declares under `**Files:**` per-plan-task. Anything else is out-of-scope and must STOP-and-report.
+- **No plan editing**: if you find a step is wrong (referenced symbol missing, command syntax broken, etc.), STOP and report. Do NOT "fix the plan as you go" — the user owns plan revisions.
+- **No early exit**: do NOT mark the prd2impl task completed until ALL `### Task N:` headings in the source plan have all their checkboxes ticked.
+
+### Completion criteria
+
+Before marking the prd2impl task `completed`:
+- Every `- [ ]` in `{source_plan_path}` is now `- [x]`.
+- All tests declared in the plan pass under their declared command.
+- `git diff {base_branch}...HEAD --name-status` matches the plan's aggregated File Structure (skill-10-smoke-test will cross-check this at milestone time; you should self-check it now).
+- Commit message format: `task: {task_id} — plan-passthrough complete ({source_plan_step_count} steps across {source_plan_task_count} plan-tasks)`.
+````
+
+**Step 4a.3**: Why this is cleaner than inlining the plan steps verbatim into the prompt: the writing-plans format is purpose-built for `superpowers:executing-plans` and `superpowers:subagent-driven-development` to consume. Re-encoding the steps into a prd2impl prompt would duplicate that contract and drift out of sync as superpowers evolves. The subagent just opens the plan file like any developer would and follows it.
+
+**Step 4a.4**: Verify the dispatch prompt. Before launching the agent, print the constructed prompt to logs (debug-level). Confirm it contains:
+- `## Plan-Passthrough Execution`
+- The literal `source_plan_path` value (not a placeholder)
+- The "Required workflow" section
+- The "Hard rules" section
+- The "Completion criteria" section
+
+If any are missing, halt — there's a template bug.
 
 ### Step 5: Dispatch Agents
 

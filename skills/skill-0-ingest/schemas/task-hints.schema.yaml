@@ -118,3 +118,66 @@ properties:
           properties:
             risk: {type: string}
             mitigation: {type: string}
+
+      tasks:
+        type: array
+        description: >
+          Plan-task hierarchy preserved verbatim from a role=plan source MD.
+          Each entry corresponds to one '### Task N: <name>' heading in the
+          source plan. Present only when source role is 'plan' AND the file
+          is writing-plans-format (header contains the
+          'REQUIRED SUB-SKILL: Use superpowers:executing-plans' /
+          'superpowers:subagent-driven-development' signature).
+
+          Downstream skill-3 (Option B coarse-grained) groups entries by
+          source_plan_path and emits ONE prd2impl task per unique plan file,
+          aggregating files-touched across all plan-tasks in the file.
+          The rich per-plan-task data stays in task-hints.yaml — skill-9 and
+          skill-10 read it directly for per-plan-task progress and file diffs.
+        items:
+          type: object
+          required: [task_index, name, source_plan_path, source_plan_anchor]
+          properties:
+            task_index:
+              type: integer
+              description: "1-based ordinal as it appears in the plan."
+            name:
+              type: string
+              description: "Task title from the '### Task N: <name>' heading."
+            source_plan_path:
+              type: string
+              description: "Repo-relative path to the source plan md."
+            source_plan_anchor:
+              type: string
+              description: >
+                Heading slug for the task's '### Task N:' line in the source md
+                (GitHub-flavored slug: lowercased, spaces → '-', punctuation
+                stripped). Used by downstream skills to deep-link.
+            files:
+              type: object
+              description: "Files declared under the task's **Files:** sub-section."
+              properties:
+                create: {type: array, items: {type: string}}
+                modify: {type: array, items: {type: string}}
+                test:   {type: array, items: {type: string}}
+                delete: {type: array, items: {type: string}}
+            steps:
+              type: array
+              description: >
+                Ordered checkbox steps under this task. Verbatim copy of each
+                '- [ ] **Step M:** ...' line; downstream skill-8 references the
+                count, skill-9 counts checked/unchecked for progress.
+              items:
+                type: object
+                required: [step_index, description]
+                properties:
+                  step_index: {type: integer}
+                  description:
+                    type: string
+                    description: "Step heading text (after 'Step M:')."
+                  has_code_block:
+                    type: boolean
+                    description: "True if the step body contains a fenced code block."
+                  has_run_command:
+                    type: boolean
+                    description: "True if the step body contains a 'Run: ...' line."
